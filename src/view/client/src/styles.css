@@ -82,11 +82,6 @@ textarea {
   width: 100%;
 }
 
-.toolbar-meta {
-  display: flex;
-  flex: 0 0 auto;
-}
-
 #adminSecret {
   background: var(--surface);
   border: 1px solid var(--border-soft);
@@ -325,8 +320,8 @@ textarea:focus,
 .layout {
   align-items: start;
   display: grid;
-  gap: 26px;
-  grid-template-columns: 220px minmax(0, 820px);
+  gap: 20px;
+  grid-template-columns: 220px minmax(0, 820px) 88px;
   justify-content: center;
   padding: 26px 32px 48px;
 }
@@ -438,6 +433,33 @@ textarea:focus,
   color: var(--text-muted);
   font-size: 13px;
   text-align: right;
+}
+
+.side-tools {
+  align-self: start;
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+  padding-top: 6px;
+  position: sticky;
+  top: 118px;
+}
+
+.source-text-trigger {
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 620;
+  padding: 0;
+}
+
+.source-text-trigger:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .review-mode-strip {
@@ -1445,6 +1467,13 @@ textarea {
 
   .sidebar {
     display: none;
+  }
+
+  .side-tools {
+    justify-content: flex-end;
+    order: -1;
+    padding-top: 0;
+    position: static;
   }
 
   .review-panel {

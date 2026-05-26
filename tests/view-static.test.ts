@@ -211,8 +211,9 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
   assert.match(app, /className="topbar-title"/);
-  assert.match(app, /className="toolbar-meta"/);
-  assert.match(app, /<Dialog\.Trigger className="admin-trigger">Sources<\/Dialog\.Trigger>/);
+  assert.doesNotMatch(app, /className="toolbar-meta"/);
+  assert.match(app, /className="side-tools"/);
+  assert.match(app, /<Dialog\.Trigger className="source-text-trigger">Sources<\/Dialog\.Trigger>/);
   assert.match(app, /className="workflow-board"/);
   assert.match(app, /className="queue-header"/);
   assert.match(app, /className="queue-description"/);
@@ -226,7 +227,10 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.match(app, /Connect a source/);
   assert.match(app, /Open Sources/);
   assert.match(css, /\.topbar-title/);
-  assert.match(css, /\.toolbar-meta/);
+  assert.doesNotMatch(css, /\.toolbar-meta/);
+  assert.doesNotMatch(css, /\.queue-actions/);
+  assert.match(css, /\.side-tools/);
+  assert.match(css, /\.source-text-trigger/);
   assert.match(css, /\.workflow-board/);
   assert.match(css, /\.queue-header/);
   assert.match(css, /\.item-primary-row/);

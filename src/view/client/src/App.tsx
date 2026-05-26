@@ -615,6 +615,87 @@ export function App() {
     });
   }
 
+  const sourceControls = (
+    <Dialog.Root open={adminOpen} onOpenChange={setAdminOpen}>
+      <Dialog.Trigger className="source-text-trigger">Sources</Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="admin-backdrop" />
+        <Dialog.Popup className="admin-dialog">
+          <div className="admin-dialog-header">
+            <div>
+              <Dialog.Title className="admin-title">Admin</Dialog.Title>
+              <Dialog.Description className="admin-description">
+                Authorize sources and run manual syncs.
+              </Dialog.Description>
+            </div>
+            <Dialog.Close className="admin-close">Close</Dialog.Close>
+          </div>
+          <div className="admin-dialog-body" aria-label="Admin sync controls">
+            <Input
+              id="adminSecret"
+              type="password"
+              placeholder="ADMIN_SECRET"
+              value={adminSecret}
+              onValueChange={saveAdminSecret}
+            />
+            <div className="admin-actions">
+              <button type="button" className="admin-button" onClick={() => loadAdminStatus()}>
+                Check status
+              </button>
+              <button
+                type="button"
+                className="admin-button"
+                disabled={!canSyncAnySource}
+                onClick={() => runManualSync("all", 2)}
+              >
+                {syncingAction === "all:2" ? "Syncing" : "Sync all"}
+              </button>
+              <button
+                type="button"
+                className="admin-button primary"
+                disabled={!canSyncAnySource}
+                onClick={() => runManualSync("all", 50, true)}
+              >
+                {syncingAction === "all:50" ? "Syncing" : "First sync"}
+              </button>
+            </div>
+            <div className="source-action-list">
+              {sourceActions.map((action) => (
+                <div className="source-action" key={action.source}>
+                  <div>
+                    <strong>{action.label}</strong>
+                    <span>{action.description}</span>
+                    <span className={sourceStatus(action.source)?.syncEnabled ? "source-status ready" : "source-status"}>
+                      {sourceStatus(action.source)?.syncEnabled
+                        ? "Ready to sync"
+                        : sourceStatus(action.source)?.reason || "Check status before syncing."}
+                    </span>
+                  </div>
+                  <div className="source-action-buttons">
+                    {action.authPath ? (
+                      <button type="button" className="admin-button" onClick={() => startSourceAuth(action)}>
+                        Authorize {action.label}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="admin-button"
+                      disabled={!canSyncSource(action.source)}
+                      onClick={() => runManualSync(action.source, 2)}
+                    >
+                      {syncingAction === `${action.source}:2` ? "Syncing" : <>Sync {action.label}</>}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {syncMessage ? <div className="sync-status">{syncMessage}</div> : null}
+          </div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+
   return (
     <>
       <header className="topbar">
@@ -659,86 +740,6 @@ export function App() {
               value={selectedStatus}
               onValueChange={changeStatus}
             />
-          </div>
-          <div className="toolbar-meta">
-          <Dialog.Root open={adminOpen} onOpenChange={setAdminOpen}>
-            <Dialog.Trigger className="admin-trigger">Sources</Dialog.Trigger>
-            <Dialog.Portal>
-              <Dialog.Backdrop className="admin-backdrop" />
-              <Dialog.Popup className="admin-dialog">
-                <div className="admin-dialog-header">
-                  <div>
-                    <Dialog.Title className="admin-title">Admin</Dialog.Title>
-                    <Dialog.Description className="admin-description">
-                      Authorize sources and run manual syncs.
-                    </Dialog.Description>
-                  </div>
-                  <Dialog.Close className="admin-close">Close</Dialog.Close>
-                </div>
-                <div className="admin-dialog-body" aria-label="Admin sync controls">
-                  <Input
-                    id="adminSecret"
-                    type="password"
-                    placeholder="ADMIN_SECRET"
-                    value={adminSecret}
-                    onValueChange={saveAdminSecret}
-                  />
-                  <div className="admin-actions">
-                    <button type="button" className="admin-button" onClick={() => loadAdminStatus()}>
-                      Check status
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-button"
-                      disabled={!canSyncAnySource}
-                      onClick={() => runManualSync("all", 2)}
-                    >
-                      {syncingAction === "all:2" ? "Syncing" : "Sync all"}
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-button primary"
-                      disabled={!canSyncAnySource}
-                      onClick={() => runManualSync("all", 50, true)}
-                    >
-                      {syncingAction === "all:50" ? "Syncing" : "First sync"}
-                    </button>
-                  </div>
-                  <div className="source-action-list">
-                    {sourceActions.map((action) => (
-                      <div className="source-action" key={action.source}>
-                        <div>
-                          <strong>{action.label}</strong>
-                          <span>{action.description}</span>
-                          <span className={sourceStatus(action.source)?.syncEnabled ? "source-status ready" : "source-status"}>
-                            {sourceStatus(action.source)?.syncEnabled
-                              ? "Ready to sync"
-                              : sourceStatus(action.source)?.reason || "Check status before syncing."}
-                          </span>
-                        </div>
-                        <div className="source-action-buttons">
-                          {action.authPath ? (
-                            <button type="button" className="admin-button" onClick={() => startSourceAuth(action)}>
-                              Authorize {action.label}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="admin-button"
-                            disabled={!canSyncSource(action.source)}
-                            onClick={() => runManualSync(action.source, 2)}
-                          >
-                            {syncingAction === `${action.source}:2` ? "Syncing" : <>Sync {action.label}</>}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {syncMessage ? <div className="sync-status">{syncMessage}</div> : null}
-                </div>
-              </Dialog.Popup>
-            </Dialog.Portal>
-          </Dialog.Root>
           </div>
         </div>
       </header>
@@ -879,6 +880,9 @@ export function App() {
             )}
           </div>
         </section>
+        <aside className="side-tools">
+          {sourceControls}
+        </aside>
       </main>
     </>
   );
