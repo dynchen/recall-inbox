@@ -218,6 +218,30 @@ test("review page supports a faster review workflow", async () => {
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.status-actions\s*{[^}]*width: 100%;/);
 });
 
+test("review page exposes a daily review view", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+
+  assert.match(app, /const \[dailyReviewActive, setDailyReviewActive\]/);
+  assert.match(app, /const latestReviewDate = dateCounts\[0\]\?\.date/);
+  assert.match(app, /function startDailyReview/);
+  assert.match(app, /setDailyReviewActive\(true\)/);
+  assert.match(app, /setSelectedDate\(latestReviewDate\)/);
+  assert.match(app, /setSelectedStatus\("inbox"\)/);
+  assert.match(app, /function stopDailyReview/);
+  assert.match(app, /setDailyReviewActive\(false\)/);
+  assert.match(app, /setSelectedDate\("all"\)/);
+  assert.match(app, /setSelectedStatus\("all"\)/);
+  assert.match(app, /className="review-mode-strip"/);
+  assert.match(app, /Daily Review/);
+  assert.match(app, /Start daily review/);
+  assert.match(app, /Exit review/);
+  assert.match(app, /latestReviewDate \? `Reviewing \$\{latestReviewDate\}/);
+  assert.match(css, /\.review-mode-strip/);
+  assert.match(css, /\.daily-review-button/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.review-mode-strip\s*{[^}]*grid-template-columns: 1fr;/);
+});
+
 test("review page exposes protected manual sync controls", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");

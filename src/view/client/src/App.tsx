@@ -195,6 +195,7 @@ export function App() {
   const [selectedDate, setSelectedDate] = useState("all");
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [dailyReviewActive, setDailyReviewActive] = useState(false);
   const [adminSecret, setAdminSecret] = useState(() => sessionStorage.getItem("recall-inbox-admin-secret") || "");
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [syncMessage, setSyncMessage] = useState("");
@@ -220,6 +221,14 @@ export function App() {
   }, []);
 
   const dateCounts = useMemo(() => buildDateCounts(items), [items]);
+  const latestReviewDate = dateCounts[0]?.date;
+  const latestReviewInboxCount = useMemo(
+    () =>
+      latestReviewDate
+        ? items.filter((item) => itemDate(item) === latestReviewDate && normalizeStatus(item.status) === "inbox").length
+        : 0,
+    [items, latestReviewDate]
+  );
   const dateOptions = useMemo(
     () => [
       { label: `All dates (${items.length})`, value: "all" },
@@ -309,7 +318,12 @@ export function App() {
   function changeDate(nextDate: string) {
     if (nextDate === selectedDate) return;
 
-    const applyDate = () => setSelectedDate(nextDate);
+    const applyDate = () => {
+      if (dailyReviewActive && nextDate !== latestReviewDate) {
+        setDailyReviewActive(false);
+      }
+      setSelectedDate(nextDate);
+    };
     if ("startViewTransition" in document) {
       document.startViewTransition(applyDate);
       return;
@@ -318,6 +332,28 @@ export function App() {
     setItemsAnimating(true);
     applyDate();
     finishItemsAnimation();
+  }
+
+  function changeStatus(nextStatus: string) {
+    if (dailyReviewActive && nextStatus !== "inbox") {
+      setDailyReviewActive(false);
+    }
+    setSelectedStatus(nextStatus);
+  }
+
+  function startDailyReview() {
+    if (!latestReviewDate) return;
+    setDailyReviewActive(true);
+    setSelectedDate(latestReviewDate);
+    setSelectedStatus("inbox");
+    setFocusedItemId("");
+  }
+
+  function stopDailyReview() {
+    setDailyReviewActive(false);
+    setSelectedDate("all");
+    setSelectedStatus("all");
+    setFocusedItemId("");
   }
 
   function saveAdminSecret(value: string) {
@@ -483,7 +519,7 @@ export function App() {
               id="statusFilter"
               options={[{ label: "All status", value: "all" }, ...statusSelectOptions]}
               value={selectedStatus}
-              onValueChange={setSelectedStatus}
+              onValueChange={changeStatus}
             />
           </div>
           <Dialog.Root>
@@ -594,6 +630,29 @@ export function App() {
         </aside>
 
         <section className="content-shell">
+          <div className="review-mode-strip" data-active={dailyReviewActive ? "true" : "false"}>
+            <div>
+              <span className="summary-label">Daily Review</span>
+              <strong>
+                {dailyReviewActive
+                  ? latestReviewDate ? `Reviewing ${latestReviewDate}` : "No review date"
+                  : latestReviewDate ? `${latestReviewDate} inbox` : "No items yet"}
+              </strong>
+              <span>
+                {dailyReviewActive
+                  ? `${filteredItems.length} items in focus`
+                  : `${latestReviewInboxCount} inbox items ready`}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="daily-review-button"
+              disabled={!latestReviewDate}
+              onClick={dailyReviewActive ? stopDailyReview : startDailyReview}
+            >
+              {dailyReviewActive ? "Exit review" : "Start daily review"}
+            </button>
+          </div>
           <div className="queue-summary" aria-label="Visible item summary">
             <div>
               <span className="summary-label">Inbox</span>

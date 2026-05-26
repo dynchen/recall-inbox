@@ -400,6 +400,69 @@ textarea:focus,
   min-width: 0;
 }
 
+.review-mode-strip {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px 14px;
+}
+
+.review-mode-strip[data-active="true"] {
+  background: color-mix(in srgb, var(--accent-soft) 48%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border-soft));
+}
+
+.review-mode-strip strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 720;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+.review-mode-strip span:last-child {
+  color: var(--text-muted);
+  display: block;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.daily-review-button {
+  align-items: center;
+  background: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 7px;
+  color: var(--surface);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 680;
+  height: 38px;
+  justify-content: center;
+  padding: 0 14px;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+  white-space: nowrap;
+}
+
+.daily-review-button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.daily-review-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .queue-summary {
   align-items: stretch;
   background: color-mix(in srgb, var(--surface) 78%, transparent);
@@ -1164,6 +1227,14 @@ textarea {
 
   .queue-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-mode-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-review-button {
+    width: 100%;
   }
 
   .item-header {
