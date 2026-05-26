@@ -224,11 +224,14 @@ test("review page exposes a daily review view", async () => {
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
   assert.match(app, /const \[dailyReviewActive, setDailyReviewActive\]/);
-  assert.match(app, /const latestReviewDate = dateCounts\[0\]\?\.date/);
+  assert.match(app, /const latestReviewItem = sortedViewItems\.find\(\(item\) => item\.normalizedStatus === "inbox"\)/);
+  assert.match(app, /const latestReviewDate = latestReviewItem\?\.dateKey/);
   assert.match(app, /function startDailyReview/);
   assert.match(app, /setDailyReviewActive\(true\)/);
   assert.match(app, /setSelectedDate\(latestReviewDate\)/);
+  assert.match(app, /setSelectedSource\("all"\)/);
   assert.match(app, /setSelectedStatus\("inbox"\)/);
+  assert.match(app, /setQuery\(""\)/);
   assert.match(app, /function stopDailyReview/);
   assert.match(app, /setDailyReviewActive\(false\)/);
   assert.match(app, /setSelectedDate\("all"\)/);

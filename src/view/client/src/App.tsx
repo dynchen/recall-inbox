@@ -264,7 +264,8 @@ export function App() {
   );
   const sortedViewItems = useMemo(() => sortItems(viewItems), [viewItems]);
   const dateCounts = useMemo(() => buildDateCounts(viewItems), [viewItems]);
-  const latestReviewDate = dateCounts[0]?.date;
+  const latestReviewItem = sortedViewItems.find((item) => item.normalizedStatus === "inbox");
+  const latestReviewDate = latestReviewItem?.dateKey;
   const latestReviewInboxCount = useMemo(
     () =>
       latestReviewDate
@@ -451,7 +452,9 @@ export function App() {
     if (!latestReviewDate) return;
     setDailyReviewActive(true);
     setSelectedDate(latestReviewDate);
+    setSelectedSource("all");
     setSelectedStatus("inbox");
+    setQuery("");
     setFocusedItemId("");
   }
 
