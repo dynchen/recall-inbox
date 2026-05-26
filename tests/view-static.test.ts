@@ -9,6 +9,7 @@ test("review page is built as a Vite React app with Base UI primitives", async (
 
   assert.match(html, /id="root"/);
   assert.match(html, /<title>Recall Inbox<\/title>/);
+  assert.match(html, /<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg" \/>/);
   assert.match(packageJson, /vite build/);
   assert.match(packageJson, /"@base-ui\/react"/);
   assert.match(app, /function formatDateTime/);
@@ -17,20 +18,40 @@ test("review page is built as a Vite React app with Base UI primitives", async (
   assert.match(app, /import \{ Select \} from "@base-ui\/react\/select"/);
 });
 
+test("review page ships a simple favicon", async () => {
+  const favicon = await readFile("src/view/client/public/favicon.svg", "utf8");
+
+  assert.match(favicon, /<svg/);
+  assert.match(favicon, /viewBox="0 0 32 32"/);
+  assert.match(favicon, /aria-label="Recall Inbox"/);
+  assert.match(favicon, /<title>Recall Inbox<\/title>/);
+  assert.match(favicon, /<rect/);
+  assert.match(favicon, /<path/);
+});
+
 test("review page keeps controls usable on narrow screens", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
   assert.match(app, /className="desktop-search-field"/);
+  assert.match(app, /className="mobile-tools"/);
   assert.match(app, /className="mobile-search-disclosure"/);
   assert.match(app, /id="mobileSearch"/);
+  assert.match(app, /id="mobileDateFilter"/);
+  assert.match(app, /id="mobileSourceFilter"/);
+  assert.match(app, /id="mobileStatusFilter"/);
   assert.match(css, /@media \(max-width: 980px\)/);
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.match(css, /\.item-header\s*{[\s\S]*flex-wrap: wrap;/);
   assert.match(css, /\.item-text\s*{[\s\S]*overflow-wrap: anywhere;/);
   assert.match(css, /grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(css, /\.mobile-tools\s*{[^}]*display: none;/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.desktop-search-field\s*{[^}]*display: none;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mobile-tools\s*{[^}]*display: inline-flex;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.toolbar\s*{[^}]*display: none;/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mobile-search-disclosure\s*{[^}]*display: block;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mobile-search-popover\s*{[^}]*right: 0;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.workflow-filters\s*{[^}]*display: none;/);
   assert.match(css, /\.select-item-text\s*{[^}]*white-space: nowrap;/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.item-side-actions\s*{[^}]*display: contents;/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.open-link\s*{[^}]*grid-column: 2;/);
@@ -84,6 +105,7 @@ test("review page has mobile-first navigation and processing affordances", async
   assert.match(css, /\.loading-card/);
   assert.match(css, /@keyframes loading-pulse/);
   assert.match(app, /id="dateFilter"/);
+  assert.match(app, /id="mobileDateFilter"/);
   assert.match(app, /function changeDate/);
   assert.match(app, /document\.startViewTransition/);
   assert.match(app, /changeDate\("all"\)/);
@@ -228,10 +250,32 @@ test("review page surfaces X metadata without showing language", async () => {
   assert.match(app, /expanded_url/);
   assert.match(app, /bookmark_count/);
   assert.match(app, /referencedTweetObjects/);
+  assert.match(app, /className="source-details-heading"/);
+  assert.match(app, /className="source-detail-list readable"/);
+  assert.doesNotMatch(app, /<details className="source-details">/);
   assert.doesNotMatch(app, /xMetadata\(item\)\?\.lang/);
   assert.match(css, /\.source-signal-list/);
   assert.match(css, /\.source-signal-chip/);
   assert.match(css, /\.source-details/);
+  assert.match(css, /\.source-detail-list\.readable span/);
+  assert.match(css, /\.source-detail-list\.readable span\s*{[\s\S]*white-space: normal;/);
+  assert.match(css, /\.source-detail-list\.readable span\s*{[\s\S]*overflow-wrap: anywhere;/);
+});
+
+test("review page surfaces GitHub metadata without showing language in the card", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+
+  assert.match(app, /interface GitHubMetadata/);
+  assert.match(app, /function githubMetadata/);
+  assert.match(app, /function githubSignalChips/);
+  assert.match(app, /function sourceSignalChips/);
+  assert.match(app, /metadata\?\.license/);
+  assert.match(app, /metadata\?\.forks/);
+  assert.match(app, /metadata\?\.openIssues/);
+  assert.match(app, /metadata\?\.archived/);
+  assert.match(app, /metadata\?\.defaultBranch/);
+  assert.match(app, /metadata\?\.homepage/);
+  assert.doesNotMatch(app, /\{details\.language \? <span>\{details\.language\}<\/span> : null\}/);
 });
 
 test("review page keeps filters and review controls visually quiet", async () => {
@@ -314,11 +358,12 @@ test("review page supports a faster review workflow", async () => {
   assert.match(app, /setItems\(\(current\) => current\.map\(\(item\) => \(item\.id === id \? \{ \.\.\.item, \.\.\.patch \} : item\)\)\)/);
   assert.match(app, /if \(saveVersions\.current\.get\(id\) !== version\) return/);
   assert.match(app, /previousItem \? previousItem : item/);
-  assert.match(app, /saveItem\(focusedItem\.id, \{ status \}\)/);
+  assert.match(app, /saveItemPatch\(focusedItem\.id, \{ status \}\)/);
   assert.match(app, /setReviewOpen\(focusedItem\.id, true\)/);
   assert.match(app, /focused=\{focusedItemId === item\.id\}/);
   assert.match(app, /onFocusItem=\{\(\) => setFocusedItemId\(item\.id\)\}/);
-  assert.match(app, /onQuickStatus=\{\(status\) => saveItem\(item\.id, \{ status \}\)\}/);
+  assert.match(app, /onQuickStatus=\{\(status\) => saveItemPatch\(item\.id, \{ status \}\)\}/);
+  assert.match(app, /onSave=\{\(patch\) => saveItemPatch\(item\.id, patch\)\}/);
   assert.match(app, /className="status-actions"/);
   assert.match(app, /aria-label=\{`Mark as \$\{statusLabels\[option\]\}`\}/);
   assert.match(app, /className=\{`status-action status-\$\{option\}/);
@@ -327,6 +372,17 @@ test("review page supports a faster review workflow", async () => {
   assert.match(css, /\.status-actions \.status-action/);
   assert.doesNotMatch(css, /(^|\n)\.status-action\s*{/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.status-actions\s*{[^}]*width: 100%;/);
+});
+
+test("queue preset status edits do not stay locked to the old status filter", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+
+  assert.match(app, /function saveItemPatch\(id: string, patch: Partial<Pick<SavedItem, "status" \| "tags" \| "note">>\)/);
+  assert.match(app, /patch\.status && !dailyReviewActive && selectedStatus !== "all" && selectedStatus !== patch\.status/);
+  assert.match(app, /setSelectedStatus\("all"\)/);
+  assert.match(app, /saveItemPatch\(focusedItem\.id, \{ status \}\)/);
+  assert.match(app, /onQuickStatus=\{\(status\) => saveItemPatch\(item\.id, \{ status \}\)\}/);
+  assert.match(app, /onSave=\{\(patch\) => saveItemPatch\(item\.id, patch\)\}/);
 });
 
 test("review page exposes a daily review view", async () => {
@@ -347,13 +403,21 @@ test("review page exposes a daily review view", async () => {
   assert.match(app, /setSelectedDate\("all"\)/);
   assert.match(app, /setSelectedStatus\("all"\)/);
   assert.match(app, /className="review-mode-strip"/);
-  assert.match(app, /Daily Review/);
-  assert.match(app, /Start daily review/);
+  assert.match(app, /Review inbox/);
   assert.match(app, /Exit review/);
-  assert.match(app, /latestReviewDate \? `Reviewing \$\{latestReviewDate\}/);
+  assert.match(app, /latestReviewDate \? `Next inbox: \$\{latestReviewDate\}` : "Inbox clear"/);
+  assert.doesNotMatch(app, /Start daily review/);
+  assert.doesNotMatch(app, /No items yet/);
   assert.match(css, /\.review-mode-strip/);
   assert.match(css, /\.daily-review-button/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.review-mode-strip\s*{[^}]*grid-template-columns: 1fr;/);
+});
+
+test("date changes reset status filtering to keep counts aligned", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+
+  assert.match(app, /function changeDate\(nextDate: string\)/);
+  assert.match(app, /function changeDate\(nextDate: string\)[\s\S]*setSelectedStatus\("all"\)[\s\S]*setSelectedDate\(nextDate\)/);
 });
 
 test("review page exposes queue presets for focused filters", async () => {
@@ -432,12 +496,14 @@ test("review page exposes protected manual sync controls", async () => {
   assert.match(app, /<Dialog\.Root/);
   assert.match(app, /<Dialog\.Trigger/);
   assert.match(app, /<Dialog\.Popup/);
-  assert.match(app, /Admin/);
+  assert.match(app, /Sources & sync/);
   assert.match(app, /Recall Inbox/);
+  assert.match(app, /Use ADMIN_SECRET to check source readiness, authorize accounts, and run manual syncs\./);
+  assert.match(app, /Check readiness/);
+  assert.match(app, /Sync recent/);
+  assert.match(app, /Backfill all/);
   assert.match(app, /Authorize \{action\.label\}/);
-  assert.match(app, /Sync all/);
   assert.match(app, /Sync \{action\.label\}/);
-  assert.match(app, /First sync/);
   assert.match(app, /disabled=\{!canSyncAnySource/);
   assert.match(app, /disabled=\{!canSyncSource\(action\.source\)/);
   assert.match(app, /Check status/);
@@ -454,6 +520,8 @@ test("review page exposes protected manual sync controls", async () => {
   assert.match(css, /\.admin-dialog/);
   assert.match(css, /\.admin-actions/);
   assert.match(css, /\.admin-button/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.admin-dialog\s*{[^}]*inset: auto 10px 10px;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.admin-actions\s*{[^}]*grid-template-columns: 1fr;/);
   assert.match(css, /\.admin-button:disabled\s*{[\s\S]*cursor: not-allowed;/);
   assert.doesNotMatch(css, /\.admin-button:disabled\s*{[\s\S]*cursor: wait;/);
 });

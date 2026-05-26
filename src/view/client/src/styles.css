@@ -90,6 +90,10 @@ textarea {
   display: none;
 }
 
+.mobile-tools {
+  display: none;
+}
+
 #adminSecret {
   background: var(--surface);
   border: 1px solid var(--border-soft);
@@ -1143,12 +1147,10 @@ textarea:focus,
   padding-top: 8px;
 }
 
-.source-details summary {
+.source-details-heading {
   color: var(--text-muted);
-  cursor: pointer;
   font-size: 12px;
   font-weight: 650;
-  list-style-position: outside;
 }
 
 .source-details-grid {
@@ -1187,6 +1189,14 @@ textarea:focus,
 
 .source-detail-list.compact span {
   font-variant-numeric: tabular-nums;
+}
+
+.source-detail-list.readable span {
+  border-radius: 8px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .source-warning {
@@ -1613,8 +1623,25 @@ textarea {
 
 @media (max-width: 640px) {
   .topbar {
+    align-items: start;
+    display: grid;
     gap: 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: 16px;
+  }
+
+  .topbar-title {
+    min-width: 0;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .mobile-tools {
+    display: inline-flex;
+    justify-self: end;
+    position: relative;
   }
 
   .layout {
@@ -1699,14 +1726,42 @@ textarea {
     width: 100%;
   }
 
-  .toolbar,
   .review-form {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .toolbar-panel {
-    grid-template-columns: auto minmax(0, 1fr);
-    overflow: visible;
+  .admin-dialog {
+    border-radius: 12px;
+    inset: auto 10px 10px;
+    max-height: min(76vh, 680px);
+    max-width: none;
+    padding: 14px;
+    top: auto;
+    transform: none;
+    width: auto;
+  }
+
+  .admin-dialog-header {
+    gap: 10px;
+  }
+
+  .admin-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-button,
+  .admin-close {
+    min-height: 38px;
+  }
+
+  .source-action-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .review-form {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .desktop-search-field {
@@ -1721,15 +1776,17 @@ textarea {
 
   .mobile-search-disclosure summary {
     align-items: center;
-    border-right: 1px solid var(--border-soft);
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
     color: var(--text-muted);
     cursor: pointer;
     display: inline-flex;
     font-size: 13px;
     font-weight: 620;
-    height: 40px;
+    height: 34px;
     list-style: none;
-    padding: 0 12px;
+    padding: 0 11px;
     user-select: none;
   }
 
@@ -1746,20 +1803,23 @@ textarea {
     border: 1px solid var(--border-soft);
     border-radius: 8px;
     box-shadow: var(--shadow-soft);
-    left: 0;
-    padding: 6px;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
     position: absolute;
+    right: 0;
     top: calc(100% + 8px);
-    width: min(82vw, 320px);
+    width: min(88vw, 340px);
     z-index: 30;
   }
 
-  #mobileSearch {
+  #mobileSearch,
+  .mobile-search-popover .select-trigger {
     border-color: var(--border-soft);
     height: 38px;
   }
 
   .workflow-filters {
-    grid-template-columns: 1fr;
+    display: none;
   }
 }

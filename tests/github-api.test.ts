@@ -17,6 +17,15 @@ test("fetchGitHubStars maps starred repositories and stops on known page", async
           description: "Useful project",
           language: "TypeScript",
           stargazers_count: 123,
+          forks_count: 7,
+          open_issues_count: 3,
+          archived: false,
+          fork: false,
+          homepage: "https://example.com",
+          default_branch: "main",
+          updated_at: "2026-05-21T01:00:00Z",
+          pushed_at: "2026-05-22T01:00:00Z",
+          license: { spdx_id: "MIT", name: "MIT License" },
           topics: ["cli", "ai"],
           owner: { login: "owner" }
         }
@@ -77,6 +86,19 @@ test("fetchGitHubStars maps starred repositories and stops on known page", async
     assert.equal(items[0].createdAt, "2026-05-20T01:00:00Z");
     assert.match(items[0].text, /owner\/new-repo/);
     assert.match(items[0].text, /Language: TypeScript/);
+    assert.deepEqual(items[0].metadata, {
+      github: {
+        license: "MIT",
+        forks: 7,
+        openIssues: 3,
+        archived: false,
+        fork: false,
+        homepage: "https://example.com",
+        defaultBranch: "main",
+        updatedAt: "2026-05-21T01:00:00Z",
+        pushedAt: "2026-05-22T01:00:00Z"
+      }
+    });
     assert.deepEqual(items[0].tags, []);
     assert.equal(requestedUrls.length, 2);
     assert.match(JSON.stringify(requestHeaders[0]), /application\/vnd\.github\.star\+json/);

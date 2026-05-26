@@ -81,10 +81,22 @@ interface AdminStatus {
 
 interface GitHubDetails {
   description: string;
-  language?: string;
+  metadata: GitHubMetadata | null;
   repo: string;
   stars?: string;
   topics: string[];
+}
+
+interface GitHubMetadata {
+  license?: string;
+  forks?: number;
+  openIssues?: number;
+  archived?: boolean;
+  fork?: boolean;
+  homepage?: string;
+  defaultBranch?: string;
+  updatedAt?: string;
+  pushedAt?: string;
 }
 
 interface XUrlEntity {
@@ -233,7 +245,6 @@ function githubDetails(item: SavedItem): GitHubDetails | null {
   if (item.source !== "github") return null;
   const lines = item.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const repo = item.sourceItemId || lines[0] || item.authorName || "GitHub repository";
-  const language = lines.find((line) => line.startsWith("Language: "))?.replace("Language: ", "");
   const stars = lines.find((line) => line.startsWith("Stars: "))?.replace("Stars: ", "");
   const topics = splitTopics(lines.find((line) => line.startsWith("Topics: "))?.replace("Topics: ", ""));
   const description = lines
@@ -246,7 +257,29 @@ function githubDetails(item: SavedItem): GitHubDetails | null {
     )
     .join(" ");
 
-  return { description, language, repo, stars, topics };
+  return { description, metadata: githubMetadata(item), repo, stars, topics };
+}
+
+function githubMetadata(item: SavedItem): GitHubMetadata | null {
+  return item.source === "github" && item.metadata?.github && typeof item.metadata.github === "object"
+    ? item.metadata.github as GitHubMetadata
+    : null;
+}
+
+function githubSignalChips(item: SavedItem): string[] {
+  const metadata = githubMetadata(item);
+
+  const chips: string[] = [];
+  if (metadata?.license) chips.push(metadata.license);
+  if (typeof metadata?.forks === "number") chips.push(`${metadata.forks} forks`);
+  if (typeof metadata?.openIssues === "number") chips.push(`${metadata.openIssues} issues`);
+  if (metadata?.archived) chips.push("archived");
+  if (metadata?.fork) chips.push("fork");
+  return chips;
+}
+
+function sourceSignalChips(item: SavedItem): string[] {
+  return item.source === "github" ? githubSignalChips(item) : xSignalChips(item);
 }
 
 function xMetadata(item: SavedItem): XMetadata | null {
@@ -502,7 +535,7 @@ export function App() {
       if (!status) return;
       event.preventDefault();
       setFocusedItemId(focusedItem.id);
-      saveItem(focusedItem.id, { status });
+      saveItemPatch(focusedItem.id, { status });
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -523,6 +556,7 @@ export function App() {
       if (dailyReviewActive && nextDate !== latestReviewDate) {
         setDailyReviewActive(false);
       }
+      setSelectedStatus("all");
       setSelectedDate(nextDate);
     };
     if ("startViewTransition" in document) {
@@ -688,6 +722,13 @@ export function App() {
     }
   }
 
+  function saveItemPatch(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
+    if (patch.status && !dailyReviewActive && selectedStatus !== "all" && selectedStatus !== patch.status) {
+      setSelectedStatus("all");
+    }
+    return saveItem(id, patch);
+  }
+
   function toggleExpanded(id: string) {
     setExpandedItems((current) => {
       const next = new Set(current);
@@ -716,9 +757,9 @@ export function App() {
         <Dialog.Popup className="admin-dialog">
           <div className="admin-dialog-header">
             <div>
-              <Dialog.Title className="admin-title">Admin</Dialog.Title>
+              <Dialog.Title className="admin-title">Sources & sync</Dialog.Title>
               <Dialog.Description className="admin-description">
-                Authorize sources and run manual syncs.
+                Use ADMIN_SECRET to check source readiness, authorize accounts, and run manual syncs.
               </Dialog.Description>
             </div>
             <Dialog.Close className="admin-close">Close</Dialog.Close>
@@ -733,7 +774,7 @@ export function App() {
             />
             <div className="admin-actions">
               <button type="button" className="admin-button" onClick={() => loadAdminStatus()}>
-                Check status
+                Check readiness
               </button>
               <button
                 type="button"
@@ -741,7 +782,7 @@ export function App() {
                 disabled={!canSyncAnySource}
                 onClick={() => runManualSync("all", 2)}
               >
-                {syncingAction === "all:2" ? "Syncing" : "Sync all"}
+                {syncingAction === "all:2" ? "Syncing" : "Sync recent"}
               </button>
               <button
                 type="button"
@@ -749,7 +790,7 @@ export function App() {
                 disabled={!canSyncAnySource}
                 onClick={() => runManualSync("all", 50, true)}
               >
-                {syncingAction === "all:50" ? "Syncing" : "First sync"}
+                {syncingAction === "all:50" ? "Syncing" : "Backfill all"}
               </button>
             </div>
             <div className="source-action-list">
@@ -806,6 +847,41 @@ export function App() {
             {sourceControls}
           </p>
         </div>
+        <div className="mobile-tools">
+          <details className="mobile-search-disclosure">
+            <summary aria-label="Open search and filters">Search</summary>
+            <div className="mobile-search-popover">
+              <Input
+                id="mobileSearch"
+                type="search"
+                placeholder="Search text, author, tag"
+                value={query}
+                onValueChange={setQuery}
+              />
+              <BaseSelect
+                ariaLabel="Filter by date"
+                id="mobileDateFilter"
+                options={dateOptions}
+                value={selectedDate}
+                onValueChange={changeDate}
+              />
+              <BaseSelect
+                ariaLabel="Filter by source"
+                id="mobileSourceFilter"
+                options={sourceOptions}
+                value={selectedSource}
+                onValueChange={setSelectedSource}
+              />
+              <BaseSelect
+                ariaLabel="Filter by status"
+                id="mobileStatusFilter"
+                options={[{ label: "All status", value: "all" }, ...statusSelectOptions]}
+                value={selectedStatus}
+                onValueChange={changeStatus}
+              />
+            </div>
+          </details>
+        </div>
         <div className="toolbar">
           <div className="toolbar-panel">
             <div className="desktop-search-field">
@@ -817,18 +893,6 @@ export function App() {
                 onValueChange={setQuery}
               />
             </div>
-            <details className="mobile-search-disclosure">
-              <summary>Search</summary>
-              <div className="mobile-search-popover">
-                <Input
-                  id="mobileSearch"
-                  type="search"
-                  placeholder="Search text, author, tag"
-                  value={query}
-                  onValueChange={setQuery}
-                />
-              </div>
-            </details>
             <BaseSelect
               ariaLabel="Filter by date"
               className="mobile-date-filter"
@@ -894,16 +958,16 @@ export function App() {
             </div>
             <div className="review-mode-strip" data-active={dailyReviewActive ? "true" : "false"}>
               <div>
-                <span className="summary-label">Daily Review</span>
+                <span className="summary-label">Review inbox</span>
                 <strong>
                   {dailyReviewActive
-                    ? latestReviewDate ? `Reviewing ${latestReviewDate}` : "No review date"
-                    : latestReviewDate ? `${latestReviewDate} inbox` : "No items yet"}
+                    ? latestReviewDate ? `Reviewing inbox: ${latestReviewDate}` : "Inbox clear"
+                    : latestReviewDate ? `Next inbox: ${latestReviewDate}` : "Inbox clear"}
                 </strong>
                 <span>
                   {dailyReviewActive
-                    ? `${filteredItems.length} items in focus`
-                    : `${latestReviewInboxCount} inbox items ready`}
+                    ? `${filteredItems.length} inbox items in focus`
+                    : latestReviewDate ? `${latestReviewInboxCount} inbox items ready` : "No inbox items to review"}
                 </span>
               </div>
               <button
@@ -912,7 +976,7 @@ export function App() {
                 disabled={!latestReviewDate}
                 onClick={dailyReviewActive ? stopDailyReview : startDailyReview}
               >
-                {dailyReviewActive ? "Exit review" : "Start daily review"}
+                {dailyReviewActive ? "Exit review" : "Review inbox"}
               </button>
             </div>
             <div className="queue-presets" aria-label="Focused queues">
@@ -986,8 +1050,8 @@ export function App() {
                   onToggleExpanded={() => toggleExpanded(item.id)}
                   onReviewOpenChange={(open) => setReviewOpen(item.id, open)}
                   onFocusItem={() => setFocusedItemId(item.id)}
-                  onQuickStatus={(status) => saveItem(item.id, { status })}
-                  onSave={(patch) => saveItem(item.id, patch)}
+                  onQuickStatus={(status) => saveItemPatch(item.id, { status })}
+                  onSave={(patch) => saveItemPatch(item.id, patch)}
                 />
               ))
             )}
@@ -1156,7 +1220,7 @@ function ItemCard({
   const status = item.normalizedStatus;
   const details = item.details;
   const shouldClamp = item.shouldClamp;
-  const signalChips = xSignalChips(item);
+  const signalChips = sourceSignalChips(item);
 
   return (
     <article
@@ -1205,7 +1269,6 @@ function ItemCard({
             <div className="github-details">
               {details.description ? <p className="item-text">{details.description}</p> : null}
               <div className="detail-chips">
-                {details.language ? <span>{details.language}</span> : null}
                 {details.stars ? <span>{details.stars} stars</span> : null}
               </div>
               {details.topics.length ? (
@@ -1261,12 +1324,17 @@ function ReviewPanel({
 }) {
   const tags = item.tags || [];
   const hasNote = Boolean(item.note?.trim());
-  const metadata = xMetadata(item);
-  const urls = metadata ? sourceUrls(metadata) : [];
-  const metrics = metricEntries(metadata?.publicMetrics);
-  const referencedTweets = metadata?.referencedTweetObjects ?? [];
-  const media = metadata?.media ?? [];
-  const hasSourceDetails = Boolean(metadata && (urls.length || metrics.length || referencedTweets.length || media.length || metadata.possiblySensitive));
+  const x = xMetadata(item);
+  const metadata = githubMetadata(item);
+  const urls = x ? sourceUrls(x) : [];
+  const metrics = metricEntries(x?.publicMetrics);
+  const referencedTweets = x?.referencedTweetObjects ?? [];
+  const media = x?.media ?? [];
+  const hasGitHubDetails = Boolean(metadata && (metadata.homepage || metadata.defaultBranch || metadata.updatedAt || metadata.pushedAt || metadata.license));
+  const hasSourceDetails = Boolean(
+    (x && (urls.length || metrics.length || referencedTweets.length || media.length || x.possiblySensitive)) ||
+    hasGitHubDetails
+  );
 
   function saveTagsOnBlur(value: string) {
     const nextTags = value
@@ -1329,9 +1397,28 @@ function ReviewPanel({
             </div>
           </div>
           {hasSourceDetails ? (
-            <details className="source-details">
-              <summary>Source details</summary>
+            <div className="source-details">
+              <div className="source-details-heading">Source details</div>
               <div className="source-details-grid">
+                {metadata?.homepage ? (
+                  <div>
+                    <span className="review-field-label">Homepage</span>
+                    <div className="source-detail-list">
+                      <a href={metadata.homepage} target="_blank" rel="noreferrer">{metadata.homepage}</a>
+                    </div>
+                  </div>
+                ) : null}
+                {metadata ? (
+                  <div>
+                    <span className="review-field-label">Repository</span>
+                    <div className="source-detail-list compact">
+                      {metadata?.license ? <span>license: {metadata.license}</span> : null}
+                      {metadata?.defaultBranch ? <span>default branch: {metadata.defaultBranch}</span> : null}
+                      {metadata?.updatedAt ? <span>updated: {formatDateTime(metadata.updatedAt)}</span> : null}
+                      {metadata?.pushedAt ? <span>pushed: {formatDateTime(metadata.pushedAt)}</span> : null}
+                    </div>
+                  </div>
+                ) : null}
                 {urls.length ? (
                   <div>
                     <span className="review-field-label">Links</span>
@@ -1357,7 +1444,7 @@ function ReviewPanel({
                 {referencedTweets.length ? (
                   <div>
                     <span className="review-field-label">Referenced</span>
-                    <div className="source-detail-list">
+                    <div className="source-detail-list readable">
                       {referencedTweets.map((tweet, index) => (
                         <span key={tweet.id ?? index}>{tweet.text ?? tweet.id}</span>
                       ))}
@@ -1374,9 +1461,9 @@ function ReviewPanel({
                     </div>
                   </div>
                 ) : null}
-                {metadata?.possiblySensitive ? <span className="source-warning">Possibly sensitive</span> : null}
+                {x?.possiblySensitive ? <span className="source-warning">Possibly sensitive</span> : null}
               </div>
-            </details>
+            </div>
           ) : null}
         </div>
       </Collapsible.Panel>

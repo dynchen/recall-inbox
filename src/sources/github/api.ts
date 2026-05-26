@@ -7,12 +7,21 @@ interface GitHubOwner {
 }
 
 interface GitHubRepo {
+  archived?: boolean;
+  default_branch?: string | null;
   full_name: string;
+  fork?: boolean;
+  forks_count?: number;
+  homepage?: string | null;
   html_url: string;
   description: string | null;
   language: string | null;
+  license?: { spdx_id?: string | null; name?: string | null } | null;
+  open_issues_count?: number;
+  pushed_at?: string | null;
   stargazers_count: number;
   topics?: string[];
+  updated_at?: string | null;
   owner: GitHubOwner;
 }
 
@@ -38,6 +47,19 @@ function nextLink(linkHeader: string | null): string | undefined {
 
 function starToSavedItem(star: GitHubStar, discoveredAt: string): SavedItem {
   const repo = star.repo;
+  const metadata = Object.fromEntries(
+    Object.entries({
+      license: repo.license?.spdx_id || repo.license?.name || undefined,
+      forks: repo.forks_count,
+      openIssues: repo.open_issues_count,
+      archived: repo.archived,
+      fork: repo.fork,
+      homepage: repo.homepage || undefined,
+      defaultBranch: repo.default_branch || undefined,
+      updatedAt: repo.updated_at || undefined,
+      pushedAt: repo.pushed_at || undefined
+    }).filter(([, value]) => value !== undefined)
+  );
   const text = [
     repo.full_name,
     repo.description,
@@ -58,7 +80,8 @@ function starToSavedItem(star: GitHubStar, discoveredAt: string): SavedItem {
     text,
     discoveredAt,
     createdAt: star.starred_at,
-    tags: []
+    tags: [],
+    ...(Object.keys(metadata).length ? { metadata: { github: metadata } } : {})
   };
 }
 

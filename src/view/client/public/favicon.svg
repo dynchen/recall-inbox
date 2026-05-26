@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Recall Inbox">
+  <title>Recall Inbox</title>
+  <rect width="32" height="32" rx="8" fill="#f8f6f1" />
+  <path
+    d="M9 7.5h14a2.5 2.5 0 0 1 2.5 2.5v12a2.5 2.5 0 0 1-2.5 2.5H9A2.5 2.5 0 0 1 6.5 22V10A2.5 2.5 0 0 1 9 7.5Z"
+    fill="#ffffff"
+    stroke="#1f1f1d"
+    stroke-width="2"
+  />
+  <path d="M10 18.5h3.7l1.45 2h1.7l1.45-2H22" fill="none" stroke="#1f1f1d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+  <path d="M12 11.5h8M12 15h6" fill="none" stroke="#8b8780" stroke-linecap="round" stroke-width="2" />
+  <path d="M22.5 7.5v8l-2.75-2-2.75 2v-8Z" fill="#2563eb" />
+</svg>
