@@ -234,6 +234,7 @@ export function App() {
   const [itemsAnimating, setItemsAnimating] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const itemsAnimationTimer = useRef<number | undefined>(undefined);
+  const saveVersions = useRef(new Map<string, number>());
 
   async function loadItems() {
     const response = await fetch("/api/items");
@@ -554,6 +555,10 @@ export function App() {
   }
 
   async function saveItem(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
+    const version = (saveVersions.current.get(id) || 0) + 1;
+    saveVersions.current.set(id, version);
+    const previousItem = items.find((item) => item.id === id);
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
     setSavingItems((current) => new Map(current).set(id, "Saving..."));
     try {
       const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
@@ -563,9 +568,12 @@ export function App() {
       });
       if (!response.ok) throw new Error("Failed to save item.");
       const data = (await response.json()) as { item: SavedItem };
+      if (saveVersions.current.get(id) !== version) return;
       setItems((current) => current.map((item) => (item.id === data.item.id ? data.item : item)));
       setSavingItems((current) => new Map(current).set(id, "Saved"));
     } catch {
+      if (saveVersions.current.get(id) !== version) return;
+      setItems((current) => current.map((item) => (item.id === id ? previousItem ? previousItem : item : item)));
       setSavingItems((current) => new Map(current).set(id, "Save failed"));
     }
   }

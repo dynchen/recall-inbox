@@ -202,9 +202,16 @@ test("review page supports a faster review workflow", async () => {
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
   assert.match(app, /const \[focusedItemId, setFocusedItemId\]/);
+  assert.match(app, /const saveVersions = useRef\(new Map<string, number>\(\)\)/);
   assert.match(app, /function isEditableTarget/);
   assert.match(app, /function shortcutStatus/);
   assert.match(app, /window\.addEventListener\("keydown", handleKeyDown\)/);
+  assert.match(app, /const version = \(saveVersions\.current\.get\(id\) \|\| 0\) \+ 1/);
+  assert.match(app, /saveVersions\.current\.set\(id, version\)/);
+  assert.match(app, /const previousItem = items\.find\(\(item\) => item\.id === id\)/);
+  assert.match(app, /setItems\(\(current\) => current\.map\(\(item\) => \(item\.id === id \? \{ \.\.\.item, \.\.\.patch \} : item\)\)\)/);
+  assert.match(app, /if \(saveVersions\.current\.get\(id\) !== version\) return/);
+  assert.match(app, /previousItem \? previousItem : item/);
   assert.match(app, /saveItem\(focusedItem\.id, \{ status \}\)/);
   assert.match(app, /setReviewOpen\(focusedItem\.id, true\)/);
   assert.match(app, /focused=\{focusedItemId === item\.id\}/);
