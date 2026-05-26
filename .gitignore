@@ -1,0 +1,7 @@
+.data/
+dist/
+node_modules/
+outputs/
+.env
+wrangler.toml
+package-lock.json

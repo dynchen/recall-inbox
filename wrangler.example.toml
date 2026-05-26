@@ -1,0 +1,21 @@
+workers_dev = true
+preview_urls = true
+name = "recall-inbox"
+main = "dist/src/worker.js"
+compatibility_date = "2026-05-25"
+
+[assets]
+directory = "./dist/view"
+binding = "ASSETS"
+
+[vars]
+SYNC_MAX_PAGES_PER_SOURCE = "2"
+
+[triggers]
+crons = ["15 18 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "inbox"
+database_id = "<your-d1-database-id>"
+preview_database_id = "<your-preview-d1-database-id>"

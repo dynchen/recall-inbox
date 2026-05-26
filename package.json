@@ -1,0 +1,39 @@
+{
+  "name": "recall-inbox",
+  "version": "0.1.0",
+  "description": "A personal inbox for saved items from X bookmarks, GitHub stars, and more.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "vite --host 127.0.0.1 --port 17865",
+    "test": "tsc -p tsconfig.json && vite build && node --test \"dist/**/*.test.js\"",
+    "auth:x": "node dist/src/cli.js auth:x",
+    "sync": "node dist/src/cli.js sync",
+    "sync:github": "node dist/src/cli.js sync:github",
+    "export:md": "node dist/src/cli.js export:md",
+    "demo": "node scripts/seed-demo.mjs",
+    "view": "node dist/src/server.js",
+    "vercel:build": "tsc -p tsconfig.json && vite build",
+    "cf:setup": "node scripts/cf-setup.mjs",
+    "cf:migrate": "node scripts/run-wrangler.mjs d1 migrations apply DB --remote",
+    "cf:migrate:local": "node scripts/run-wrangler.mjs d1 migrations apply DB --local",
+    "cf:deploy": "tsc -p tsconfig.json && vite build && node scripts/run-wrangler.mjs deploy",
+    "cf:release": "tsc -p tsconfig.json && vite build && node scripts/run-wrangler.mjs d1 migrations apply DB --remote && node scripts/run-wrangler.mjs deploy"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.5.0",
+    "postgres": "3.4.9",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "typescript": "5.7.2",
+    "vite": "6.4.1",
+    "wrangler": "4.94.0"
+  }
+}

@@ -1,0 +1,838 @@
+import { Input } from "@base-ui/react/input";
+import { Collapsible } from "@base-ui/react/collapsible";
+import { Dialog } from "@base-ui/react/dialog";
+import { Select } from "@base-ui/react/select";
+import type { ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type SavedItemStatus = "inbox" | "keep" | "action" | "dismiss";
+
+interface SavedItem {
+  id: string;
+  source: string;
+  sourceItemId?: string;
+  url: string;
+  authorName?: string;
+  authorHandle?: string;
+  text: string;
+  discoveredAt: string;
+  createdAt?: string;
+  tags?: string[];
+  note?: string;
+  status?: SavedItemStatus;
+}
+
+interface DateCount {
+  date: string;
+  count: number;
+}
+
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+type SyncSource = "all" | "x" | "github";
+type SourceSync = Exclude<SyncSource, "all">;
+
+interface SyncResult {
+  newItems: number;
+  stored: number;
+  sources: Record<string, { status: string }>;
+}
+
+interface SourceAction {
+  source: SourceSync;
+  label: string;
+  authPath?: string;
+  description: string;
+}
+
+interface SourceStatus {
+  configured: boolean;
+  authorized: boolean;
+  syncEnabled: boolean;
+  reason?: string;
+}
+
+interface AdminStatus {
+  sources: Record<SourceSync, SourceStatus>;
+}
+
+const statusOptions: SavedItemStatus[] = ["inbox", "keep", "action", "dismiss"];
+const statusLabels: Record<SavedItemStatus, string> = {
+  inbox: "Inbox",
+  keep: "Keep",
+  action: "Action",
+  dismiss: "Dismiss"
+};
+const statusSelectOptions: SelectOption[] = statusOptions.map((status) => ({ label: statusLabels[status], value: status }));
+const sourceActions: SourceAction[] = [
+  {
+    source: "x",
+    label: "X",
+    authPath: "/api/auth/x/start",
+    description: "Requires one-time OAuth authorization before bookmark sync."
+  },
+  {
+    source: "github",
+    label: "GitHub",
+    description: "Uses the configured GitHub token."
+  }
+];
+const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+});
+const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
+
+function itemDate(item: SavedItem): string {
+  return dateFormatter.format(new Date(item.createdAt || item.discoveredAt));
+}
+
+function formatDateTime(iso?: string): string {
+  if (!iso) return "-";
+  return dateTimeFormatter.format(new Date(iso));
+}
+
+function shouldClampText(text: string): boolean {
+  return text.length > 280 || text.split(/\r?\n/).length > 4;
+}
+
+function normalizeStatus(status?: string): SavedItemStatus {
+  return statusOptions.includes(status as SavedItemStatus) ? (status as SavedItemStatus) : "inbox";
+}
+
+function sortItems(items: SavedItem[]): SavedItem[] {
+  return [...items].sort((a, b) =>
+    (b.createdAt || b.discoveredAt).localeCompare(a.createdAt || a.discoveredAt)
+  );
+}
+
+function matchesQuery(item: SavedItem, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return [item.text, item.authorName, item.authorHandle, ...(item.tags || [])]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(normalized));
+}
+
+function buildDateCounts(items: SavedItem[]): DateCount[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const date = itemDate(item);
+    counts.set(date, (counts.get(date) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function sourceLabel(source: string): string {
+  return source === "github" ? "GitHub" : "X";
+}
+
+function splitTopics(topics?: string): string[] {
+  if (!topics) return [];
+  return topics
+    .split(",")
+    .map((topic) => topic.trim())
+    .filter(Boolean);
+}
+
+function githubDetails(item: SavedItem): {
+  description: string;
+  language?: string;
+  repo: string;
+  stars?: string;
+  topics: string[];
+} | null {
+  if (item.source !== "github") return null;
+  const lines = item.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const repo = item.sourceItemId || lines[0] || item.authorName || "GitHub repository";
+  const language = lines.find((line) => line.startsWith("Language: "))?.replace("Language: ", "");
+  const stars = lines.find((line) => line.startsWith("Stars: "))?.replace("Stars: ", "");
+  const topics = splitTopics(lines.find((line) => line.startsWith("Topics: "))?.replace("Topics: ", ""));
+  const description = lines
+    .filter(
+      (line) =>
+        line !== repo &&
+        !line.startsWith("Language: ") &&
+        !line.startsWith("Stars: ") &&
+        !line.startsWith("Topics: ")
+    )
+    .join(" ");
+
+  return { description, language, repo, stars, topics };
+}
+
+export function App() {
+  const [items, setItems] = useState<SavedItem[]>([]);
+  const [query, setQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState("all");
+  const [selectedSource, setSelectedSource] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [adminSecret, setAdminSecret] = useState(() => sessionStorage.getItem("recall-inbox-admin-secret") || "");
+  const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [syncingAction, setSyncingAction] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(() => new Set());
+  const [openReviewItems, setOpenReviewItems] = useState<Set<string>>(() => new Set());
+  const [savingItems, setSavingItems] = useState<Map<string, string>>(() => new Map());
+  const [itemsAnimating, setItemsAnimating] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const itemsAnimationTimer = useRef<number | undefined>(undefined);
+
+  async function loadItems() {
+    const response = await fetch("/api/items");
+    if (!response.ok) throw new Error("Failed to load items.");
+    const data = (await response.json()) as { items?: SavedItem[] };
+    setItems(data.items || []);
+    setLoadError(false);
+  }
+
+  useEffect(() => {
+    loadItems().catch(() => setLoadError(true));
+  }, []);
+
+  const dateCounts = useMemo(() => buildDateCounts(items), [items]);
+  const dateOptions = useMemo(
+    () => [
+      { label: `All dates (${items.length})`, value: "all" },
+      ...dateCounts.map(({ date, count }) => ({ label: `${date} (${count})`, value: date }))
+    ],
+    [dateCounts, items.length]
+  );
+  const sources = useMemo(() => [...new Set(items.map((item) => item.source))].sort(), [items]);
+  const sourceOptions = useMemo(
+    () => [
+      { label: "All sources", value: "all" },
+      ...sources.map((source) => ({ label: sourceLabel(source), value: source }))
+    ],
+    [sources]
+  );
+  const filteredItems = useMemo(
+    () =>
+      sortItems(items)
+        .filter((item) => selectedDate === "all" || itemDate(item) === selectedDate)
+        .filter((item) => selectedSource === "all" || item.source === selectedSource)
+        .filter((item) => selectedStatus === "all" || normalizeStatus(item.status) === selectedStatus)
+        .filter((item) => matchesQuery(item, query)),
+    [items, query, selectedDate, selectedSource, selectedStatus]
+  );
+  const visibleStatusCounts = useMemo(
+    () =>
+      filteredItems.reduce(
+        (counts, item) => {
+          counts[normalizeStatus(item.status)] += 1;
+          return counts;
+        },
+        { inbox: 0, keep: 0, action: 0, dismiss: 0 } as Record<SavedItemStatus, number>
+      ),
+    [filteredItems]
+  );
+
+  useEffect(
+    () => () => {
+      if (itemsAnimationTimer.current !== undefined) {
+        window.clearTimeout(itemsAnimationTimer.current);
+      }
+    },
+    []
+  );
+
+  function finishItemsAnimation(delay = 160) {
+    if (itemsAnimationTimer.current !== undefined) {
+      window.clearTimeout(itemsAnimationTimer.current);
+    }
+    itemsAnimationTimer.current = window.setTimeout(() => setItemsAnimating(false), delay);
+  }
+
+  function changeDate(nextDate: string) {
+    if (nextDate === selectedDate) return;
+
+    const applyDate = () => setSelectedDate(nextDate);
+    if ("startViewTransition" in document) {
+      document.startViewTransition(applyDate);
+      return;
+    }
+
+    setItemsAnimating(true);
+    applyDate();
+    finishItemsAnimation();
+  }
+
+  function saveAdminSecret(value: string) {
+    setAdminSecret(value);
+    setAdminStatus(null);
+    if (value) {
+      sessionStorage.setItem("recall-inbox-admin-secret", value);
+    } else {
+      sessionStorage.removeItem("recall-inbox-admin-secret");
+    }
+  }
+
+  async function loadAdminStatus(options: { quiet?: boolean } = {}) {
+    if (!adminSecret) {
+      setSyncMessage("Enter ADMIN_SECRET first.");
+      return;
+    }
+    if (!options.quiet) setSyncMessage("Checking sources...");
+    try {
+      const response = await fetch("/api/admin/status", {
+        headers: { Authorization: `Bearer ${adminSecret}` }
+      });
+      const data = (await response.json()) as AdminStatus | { error?: string };
+      if (!response.ok) throw new Error("error" in data ? data.error : "Failed to check sources.");
+      setAdminStatus(data as AdminStatus);
+      if (!options.quiet) setSyncMessage("Source status loaded.");
+    } catch (error) {
+      setAdminStatus(null);
+      setSyncMessage(error instanceof Error ? error.message : "Failed to check sources.");
+    }
+  }
+
+  async function startSourceAuth(action: SourceAction) {
+    if (!adminSecret) {
+      setSyncMessage("Enter ADMIN_SECRET first.");
+      return;
+    }
+    if (!action.authPath) return;
+    try {
+      const response = await fetch(action.authPath, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminSecret}` }
+      });
+      const data = (await response.json()) as { authorizationUrl?: string; error?: string };
+      if (!response.ok || !data.authorizationUrl) throw new Error(data.error || "Failed to start authorization.");
+      window.location.href = data.authorizationUrl;
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "Failed to start authorization.");
+    }
+  }
+
+  function sourceStatus(source: SourceSync): SourceStatus | undefined {
+    return adminStatus?.sources[source];
+  }
+
+  function canSyncSource(source: SourceSync): boolean {
+    return Boolean(sourceStatus(source)?.syncEnabled) && !syncingAction;
+  }
+
+  const canSyncAnySource = Boolean(adminStatus && Object.values(adminStatus.sources).some((status) => status.syncEnabled)) && !syncingAction;
+
+  async function runManualSync(source: SyncSource, maxPages: number, fullScan = false) {
+    if (!adminSecret) {
+      setSyncMessage("Enter ADMIN_SECRET first.");
+      return;
+    }
+    const action = `${source}:${maxPages}`;
+    setSyncingAction(action);
+    setSyncMessage("Syncing...");
+    try {
+      const fullScanParam = fullScan ? "&fullScan=true" : "";
+      const response = await fetch(`/api/sync?source=${source}&maxPages=${maxPages}${fullScanParam}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminSecret}` }
+      });
+      const data = (await response.json()) as SyncResult | { error?: string };
+      if (!response.ok) throw new Error("error" in data ? data.error : "Sync failed.");
+      const result = data as SyncResult;
+      const sourceNames = Object.keys(result.sources).join(", ") || "no sources";
+      const message = `Synced ${sourceNames}. ${result.newItems} new, ${result.stored} stored.`;
+      await loadAdminStatus({ quiet: true });
+      await loadItems();
+      setSyncMessage(message);
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "Sync failed.");
+    } finally {
+      setSyncingAction("");
+    }
+  }
+
+  async function saveItem(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
+    setSavingItems((current) => new Map(current).set(id, "Saving..."));
+    try {
+      const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch)
+      });
+      if (!response.ok) throw new Error("Failed to save item.");
+      const data = (await response.json()) as { item: SavedItem };
+      setItems((current) => current.map((item) => (item.id === data.item.id ? data.item : item)));
+      setSavingItems((current) => new Map(current).set(id, "Saved"));
+    } catch {
+      setSavingItems((current) => new Map(current).set(id, "Save failed"));
+    }
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedItems((current) => {
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
+  }
+
+  function setReviewOpen(id: string, open: boolean) {
+    setOpenReviewItems((current) => {
+      const next = new Set(current);
+      if (open) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  return (
+    <>
+      <header className="topbar">
+        <div>
+          <h1>Recall Inbox</h1>
+          <p id="summary">
+            {loadError ? "Failed to load local items." : `${filteredItems.length} shown, ${items.length} stored`}
+          </p>
+        </div>
+        <div className="toolbar">
+          <div className="toolbar-panel">
+            <Input
+              id="search"
+              type="search"
+              placeholder="Search text, author, tag"
+              value={query}
+              onValueChange={setQuery}
+            />
+            <BaseSelect
+              ariaLabel="Filter by date"
+              className="mobile-date-filter"
+              id="dateFilter"
+              options={dateOptions}
+              value={selectedDate}
+              onValueChange={changeDate}
+            />
+            <BaseSelect
+              ariaLabel="Filter by source"
+              id="sourceFilter"
+              options={sourceOptions}
+              value={selectedSource}
+              onValueChange={setSelectedSource}
+            />
+            <BaseSelect
+              ariaLabel="Filter by status"
+              id="statusFilter"
+              options={[{ label: "All status", value: "all" }, ...statusSelectOptions]}
+              value={selectedStatus}
+              onValueChange={setSelectedStatus}
+            />
+          </div>
+          <Dialog.Root>
+            <Dialog.Trigger className="admin-trigger">Admin</Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Backdrop className="admin-backdrop" />
+              <Dialog.Popup className="admin-dialog">
+                <div className="admin-dialog-header">
+                  <div>
+                    <Dialog.Title className="admin-title">Admin</Dialog.Title>
+                    <Dialog.Description className="admin-description">
+                      Authorize sources and run manual syncs.
+                    </Dialog.Description>
+                  </div>
+                  <Dialog.Close className="admin-close">Close</Dialog.Close>
+                </div>
+                <div className="admin-dialog-body" aria-label="Admin sync controls">
+                  <Input
+                    id="adminSecret"
+                    type="password"
+                    placeholder="ADMIN_SECRET"
+                    value={adminSecret}
+                    onValueChange={saveAdminSecret}
+                  />
+                  <div className="admin-actions">
+                    <button type="button" className="admin-button" onClick={() => loadAdminStatus()}>
+                      Check status
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-button"
+                      disabled={!canSyncAnySource}
+                      onClick={() => runManualSync("all", 2)}
+                    >
+                      {syncingAction === "all:2" ? "Syncing" : "Sync all"}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-button primary"
+                      disabled={!canSyncAnySource}
+                      onClick={() => runManualSync("all", 50, true)}
+                    >
+                      {syncingAction === "all:50" ? "Syncing" : "First sync"}
+                    </button>
+                  </div>
+                  <div className="source-action-list">
+                    {sourceActions.map((action) => (
+                      <div className="source-action" key={action.source}>
+                        <div>
+                          <strong>{action.label}</strong>
+                          <span>{action.description}</span>
+                          <span className={sourceStatus(action.source)?.syncEnabled ? "source-status ready" : "source-status"}>
+                            {sourceStatus(action.source)?.syncEnabled
+                              ? "Ready to sync"
+                              : sourceStatus(action.source)?.reason || "Check status before syncing."}
+                          </span>
+                        </div>
+                        <div className="source-action-buttons">
+                          {action.authPath ? (
+                            <button type="button" className="admin-button" onClick={() => startSourceAuth(action)}>
+                              Authorize {action.label}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="admin-button"
+                            disabled={!canSyncSource(action.source)}
+                            onClick={() => runManualSync(action.source, 2)}
+                          >
+                            {syncingAction === `${action.source}:2` ? "Syncing" : <>Sync {action.label}</>}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {syncMessage ? <div className="sync-status">{syncMessage}</div> : null}
+                </div>
+              </Dialog.Popup>
+            </Dialog.Portal>
+          </Dialog.Root>
+        </div>
+      </header>
+
+      <main className="layout">
+        <aside className="sidebar">
+          <div className="sidebar-title">Dates</div>
+          <div id="dates" className="date-list">
+            <button
+              type="button"
+              className={selectedDate === "all" ? "date-button active" : "date-button"}
+              onClick={() => changeDate("all")}
+            >
+              <span>All</span>
+              <span className="date-count">{items.length}</span>
+            </button>
+            {dateCounts.map(({ date, count }) => (
+              <button
+                key={date}
+                type="button"
+                className={selectedDate === date ? "date-button active" : "date-button"}
+                onClick={() => changeDate(date)}
+              >
+                <span>{date}</span>
+                <span className="date-count">{count}</span>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="content-shell">
+          <div className="queue-summary" aria-label="Visible item summary">
+            <div>
+              <span className="summary-label">Inbox</span>
+              <strong>{visibleStatusCounts.inbox}</strong>
+            </div>
+            <div>
+              <span className="summary-label">Keep</span>
+              <strong>{visibleStatusCounts.keep}</strong>
+            </div>
+            <div>
+              <span className="summary-label">Action</span>
+              <strong>{visibleStatusCounts.action}</strong>
+            </div>
+            <div>
+              <span className="summary-label">Dismiss</span>
+              <strong>{visibleStatusCounts.dismiss}</strong>
+            </div>
+          </div>
+          <div
+            id="items"
+            className={itemsAnimating ? "items date-changing" : "items"}
+            data-date-key={selectedDate}
+            aria-live="polite"
+          >
+            {filteredItems.length === 0 ? (
+              <div className="empty">No matching items.</div>
+            ) : (
+              filteredItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  expanded={expandedItems.has(item.id)}
+                  reviewOpen={openReviewItems.has(item.id)}
+                  saveState={savingItems.get(item.id) || "Saved"}
+                  onToggleExpanded={() => toggleExpanded(item.id)}
+                  onReviewOpenChange={(open) => setReviewOpen(item.id, open)}
+                  onSave={(patch) => saveItem(item.id, patch)}
+                />
+              ))
+            )}
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+
+function BaseSelect({
+  id,
+  ariaLabel,
+  className,
+  options,
+  value,
+  onValueChange
+}: {
+  id?: string;
+  ariaLabel: string;
+  className?: string;
+  options: SelectOption[];
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <div className={className ? `select-field ${className}` : "select-field"}>
+      <Select.Root items={options} value={value} onValueChange={(nextValue) => onValueChange(String(nextValue))}>
+        <Select.Trigger id={id} aria-label={ariaLabel} className="select-trigger">
+          <Select.Value className="select-value" />
+          <Select.Icon className="select-icon">
+            <CaretUpDownIcon />
+          </Select.Icon>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Positioner className="select-positioner" sideOffset={6} alignItemWithTrigger={false}>
+            <Select.Popup className="select-popup">
+              <Select.ScrollUpArrow className="select-scroll-arrow">
+                <CaretUpIcon />
+              </Select.ScrollUpArrow>
+              <Select.List className="select-list">
+                {options.map((option) => (
+                  <Select.Item key={option.value} value={option.value} className="select-item">
+                    <Select.ItemIndicator className="select-item-indicator">
+                      <CheckIcon />
+                    </Select.ItemIndicator>
+                    <Select.ItemText className="select-item-text">{option.label}</Select.ItemText>
+                  </Select.Item>
+                ))}
+              </Select.List>
+              <Select.ScrollDownArrow className="select-scroll-arrow">
+                <CaretDownIcon />
+              </Select.ScrollDownArrow>
+            </Select.Popup>
+          </Select.Positioner>
+        </Select.Portal>
+      </Select.Root>
+    </div>
+  );
+}
+
+function CaretUpDownIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M11 10H5l3 3.5zm0-4H5l3-3.5z" />
+    </svg>
+  );
+}
+
+function CaretUpIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M12 10H4l4-4.5z" />
+    </svg>
+  );
+}
+
+function CaretDownIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" {...props}>
+      <path d="M12 6H4l4 4.5z" />
+    </svg>
+  );
+}
+
+function CheckIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="m2.5 8.5 4 4 7-9" />
+    </svg>
+  );
+}
+
+function ItemCard({
+  item,
+  expanded,
+  reviewOpen,
+  saveState,
+  onToggleExpanded,
+  onReviewOpenChange,
+  onSave
+}: {
+  item: SavedItem;
+  expanded: boolean;
+  reviewOpen: boolean;
+  saveState: string;
+  onToggleExpanded: () => void;
+  onReviewOpenChange: (open: boolean) => void;
+  onSave: (patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) => void;
+}) {
+  const status = normalizeStatus(item.status);
+  const details = githubDetails(item);
+  const shouldClamp = shouldClampText(item.text);
+
+  return (
+    <article className={`item-card status-${status}`}>
+      <div className="item-header">
+        <div className="item-title">
+          <span className={`source-badge source-${item.source}`}>{sourceLabel(item.source)}</span>
+          <strong>{details?.repo || (item.authorHandle ? `@${item.authorHandle}` : item.authorName || "Unknown author")}</strong>
+          <span className={`status-badge status-${status}`}>{statusLabels[status]}</span>
+        </div>
+        <a className="open-link" href={item.url} target="_blank" rel="noreferrer">
+          Open
+        </a>
+      </div>
+      <div className="item-content">
+        <div className="item-body">
+          <div className="meta">
+            <span>Created {formatDateTime(item.createdAt)}</span>
+            <span>Discovered {formatDateTime(item.discoveredAt)}</span>
+          </div>
+          {details ? (
+            <div className="github-details">
+              {details.description ? <p className="item-text">{details.description}</p> : null}
+              <div className="detail-chips">
+                {details.language ? <span>{details.language}</span> : null}
+                {details.stars ? <span>{details.stars} stars</span> : null}
+              </div>
+              {details.topics.length ? (
+                <div className="topic-list">
+                  {details.topics.map((topic) => (
+                    <span key={topic} className="topic-chip" title={topic}>
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className={shouldClamp && !expanded && !details ? "item-text clamped" : "item-text"}>{item.text}</p>
+          )}
+        </div>
+        {shouldClamp && !expanded && !details ? (
+          <button type="button" className="text-toggle" onClick={onToggleExpanded}>
+            Expand
+          </button>
+        ) : null}
+      </div>
+      <ReviewPanel
+        item={item}
+        open={reviewOpen}
+        saveState={saveState}
+        onOpenChange={onReviewOpenChange}
+        onSave={onSave}
+      />
+    </article>
+  );
+}
+
+function ReviewPanel({
+  item,
+  open,
+  saveState,
+  onOpenChange,
+  onSave
+}: {
+  item: SavedItem;
+  open: boolean;
+  saveState: string;
+  onOpenChange: (open: boolean) => void;
+  onSave: (patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) => void;
+}) {
+  const tags = item.tags || [];
+  const hasNote = Boolean(item.note?.trim());
+
+  function saveTagsOnBlur(value: string) {
+    const nextTags = value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    if (nextTags.join("\0") === tags.join("\0")) return;
+    onSave({ tags: nextTags });
+  }
+
+  function saveNoteOnBlur(value: string) {
+    const nextNote = value.trim();
+    if (nextNote === (item.note || "")) return;
+    onSave({ note: nextNote });
+  }
+
+  return (
+    <Collapsible.Root
+      className="review-panel"
+      data-panel-open={open ? "true" : "false"}
+      open={open}
+      onOpenChange={onOpenChange}
+    >
+      <Collapsible.Trigger className="review-trigger">
+        <span className="review-summary">
+          <span className="review-trigger-label">{open ? "Hide review" : "Review"}</span>
+          <span className="review-preview">
+            {tags.length ? `${tags.length} tags` : "No tags"} · {hasNote ? "Note" : "No note"}
+          </span>
+        </span>
+      </Collapsible.Trigger>
+      <Collapsible.Panel className="review-fields">
+        <div className="review-editor">
+          <div className="review-form">
+          <label className="review-control">
+            Status
+            <BaseSelect
+              ariaLabel="Set review status"
+              options={statusSelectOptions}
+              value={normalizeStatus(item.status)}
+              onValueChange={(status) => onSave({ status: status as SavedItemStatus })}
+            />
+          </label>
+          <label className="review-control">
+            Tags
+            <Input defaultValue={tags.join(", ")} onBlur={(event) => saveTagsOnBlur(event.currentTarget.value)} />
+          </label>
+          <label className="review-control">
+            Note
+            <textarea rows={1} defaultValue={item.note || ""} onBlur={(event) => saveNoteOnBlur(event.target.value)} />
+          </label>
+          <div className={`review-save-state save-state ${saveState === "Save failed" ? "failed" : ""}`}>
+            {saveState}
+          </div>
+          </div>
+        </div>
+      </Collapsible.Panel>
+    </Collapsible.Root>
+  );
+}
