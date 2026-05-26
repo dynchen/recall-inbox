@@ -3,7 +3,7 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import { Dialog } from "@base-ui/react/dialog";
 import { Select } from "@base-ui/react/select";
 import type { ComponentProps } from "react";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type SavedItemStatus = "inbox" | "keep" | "action" | "dismiss";
 
@@ -87,6 +87,9 @@ interface GitHubDetails {
 }
 
 const statusOptions: SavedItemStatus[] = ["inbox", "keep", "action", "dismiss"];
+const INITIAL_RENDER_LIMIT = 50;
+const RENDER_BATCH_SIZE = 50;
+const RENDER_BATCH_DELAY = 24;
 const statusLabels: Record<SavedItemStatus, string> = {
   inbox: "Inbox",
   keep: "Keep",
@@ -235,6 +238,8 @@ export function App() {
   const [itemsAnimating, setItemsAnimating] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadingItems, setLoadingItems] = useState(true);
+  const [visibleItemLimit, setVisibleItemLimit] = useState(INITIAL_RENDER_LIMIT);
+  const [, startItemsTransition] = useTransition();
   const itemsAnimationTimer = useRef<number | undefined>(undefined);
   const saveVersions = useRef(new Map<string, number>());
 
@@ -244,8 +249,11 @@ export function App() {
       const response = await fetch("/api/items");
       if (!response.ok) throw new Error("Failed to load items.");
       const data = (await response.json()) as { items?: SavedItem[] };
-      setItems(data.items || []);
-      setLoadError(false);
+      startItemsTransition(() => {
+        setItems(data.items || []);
+        setVisibleItemLimit(INITIAL_RENDER_LIMIT);
+        setLoadError(false);
+      });
     } finally {
       setLoadingItems(false);
     }
@@ -351,6 +359,10 @@ export function App() {
         .filter((item) => matchesQuery(item, deferredQuery)),
     [deferredQuery, selectedDate, selectedSource, selectedStatus, sortedViewItems]
   );
+  const renderedItems = useMemo(
+    () => filteredItems.slice(0, visibleItemLimit),
+    [filteredItems, visibleItemLimit]
+  );
   const visibleStatusCounts = useMemo(
     () =>
       filteredItems.reduce(
@@ -381,6 +393,18 @@ export function App() {
     },
     []
   );
+
+  useEffect(() => {
+    setVisibleItemLimit(INITIAL_RENDER_LIMIT);
+  }, [deferredQuery, selectedDate, selectedSource, selectedStatus]);
+
+  useEffect(() => {
+    if (loadingItems || visibleItemLimit >= filteredItems.length) return;
+    const timer = window.setTimeout(() => {
+      setVisibleItemLimit((current) => Math.min(current + RENDER_BATCH_SIZE, filteredItems.length));
+    }, RENDER_BATCH_DELAY);
+    return () => window.clearTimeout(timer);
+  }, [filteredItems.length, loadingItems, visibleItemLimit]);
 
   useEffect(() => {
     if (!filteredItems.length) {
@@ -864,7 +888,7 @@ export function App() {
                 ) : null}
               </div>
             ) : (
-              filteredItems.map((item) => (
+              renderedItems.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}

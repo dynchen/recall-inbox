@@ -51,6 +51,18 @@ test("review page has mobile-first navigation and processing affordances", async
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
+  assert.match(app, /useTransition/);
+  assert.match(app, /const INITIAL_RENDER_LIMIT = 50;/);
+  assert.match(app, /const RENDER_BATCH_SIZE = 50;/);
+  assert.match(app, /const \[, startItemsTransition\] = useTransition\(\)/);
+  assert.match(app, /const \[visibleItemLimit, setVisibleItemLimit\] = useState\(INITIAL_RENDER_LIMIT\)/);
+  assert.match(app, /startItemsTransition\(\(\) => \{/);
+  assert.match(app, /setItems\(data\.items \|\| \[\]\)/);
+  assert.match(app, /setVisibleItemLimit\(INITIAL_RENDER_LIMIT\)/);
+  assert.match(app, /const renderedItems = useMemo/);
+  assert.match(app, /filteredItems\.slice\(0, visibleItemLimit\)/);
+  assert.match(app, /renderedItems\.map\(\(item\) =>/);
+  assert.doesNotMatch(app, /filteredItems\.map\(\(item\) =>/);
   assert.match(app, /const \[loadingItems, setLoadingItems\] = useState\(true\)/);
   assert.match(app, /setLoadingItems\(true\)/);
   assert.match(app, /finally\s*{\s*setLoadingItems\(false\)/);
