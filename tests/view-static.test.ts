@@ -51,6 +51,15 @@ test("review page has mobile-first navigation and processing affordances", async
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
+  assert.match(app, /const \[loadingItems, setLoadingItems\] = useState\(true\)/);
+  assert.match(app, /setLoadingItems\(true\)/);
+  assert.match(app, /finally\s*{\s*setLoadingItems\(false\)/);
+  assert.match(app, /Loading items\.\.\./);
+  assert.match(app, /className="loading-list"/);
+  assert.match(app, /Loading saved items\.\.\./);
+  assert.match(css, /\.loading-list/);
+  assert.match(css, /\.loading-card/);
+  assert.match(css, /@keyframes loading-pulse/);
   assert.match(app, /id="dateFilter"/);
   assert.match(app, /function changeDate/);
   assert.match(app, /document\.startViewTransition/);

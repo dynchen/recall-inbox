@@ -233,15 +233,21 @@ export function App() {
   const [focusedItemId, setFocusedItemId] = useState("");
   const [itemsAnimating, setItemsAnimating] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(true);
   const itemsAnimationTimer = useRef<number | undefined>(undefined);
   const saveVersions = useRef(new Map<string, number>());
 
   async function loadItems() {
-    const response = await fetch("/api/items");
-    if (!response.ok) throw new Error("Failed to load items.");
-    const data = (await response.json()) as { items?: SavedItem[] };
-    setItems(data.items || []);
-    setLoadError(false);
+    setLoadingItems(true);
+    try {
+      const response = await fetch("/api/items");
+      if (!response.ok) throw new Error("Failed to load items.");
+      const data = (await response.json()) as { items?: SavedItem[] };
+      setItems(data.items || []);
+      setLoadError(false);
+    } finally {
+      setLoadingItems(false);
+    }
   }
 
   useEffect(() => {
@@ -604,7 +610,11 @@ export function App() {
         <div>
           <h1>Recall Inbox</h1>
           <p id="summary">
-            {loadError ? "Failed to load local items." : `${filteredItems.length} shown, ${items.length} stored`}
+            {loadError
+              ? "Failed to load local items."
+              : loadingItems
+                ? "Loading items..."
+                : `${filteredItems.length} shown, ${items.length} stored`}
           </p>
         </div>
         <div className="toolbar">
@@ -807,7 +817,14 @@ export function App() {
             data-date-key={selectedDate}
             aria-live="polite"
           >
-            {filteredItems.length === 0 ? (
+            {loadingItems ? (
+              <div className="loading-list" role="status" aria-label="Loading saved items">
+                <span>Loading saved items...</span>
+                <div className="loading-card" />
+                <div className="loading-card" />
+                <div className="loading-card" />
+              </div>
+            ) : filteredItems.length === 0 ? (
               <div className="empty">No matching items.</div>
             ) : (
               filteredItems.map((item) => (

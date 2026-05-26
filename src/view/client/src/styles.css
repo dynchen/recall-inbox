@@ -558,6 +558,36 @@ textarea:focus,
   opacity: 0.96;
 }
 
+.loading-list {
+  display: grid;
+  gap: 10px;
+}
+
+.loading-list > span {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 4px 2px;
+}
+
+.loading-card {
+  animation: loading-pulse 1200ms ease-in-out infinite;
+  background: linear-gradient(90deg, var(--surface-raised), var(--surface-muted), var(--surface-raised));
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  min-height: 118px;
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 ::view-transition-old(saved-items-list) {
   animation: saved-items-old 160ms ease-out both;
 }
@@ -1171,6 +1201,7 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .admin-backdrop,
   .admin-dialog,
+  .loading-card,
   .review-fields,
   .select-popup {
     animation: none;
