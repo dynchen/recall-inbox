@@ -223,6 +223,7 @@ export function App() {
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dailyReviewActive, setDailyReviewActive] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [adminSecret, setAdminSecret] = useState(() => sessionStorage.getItem("recall-inbox-admin-secret") || "");
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [syncMessage, setSyncMessage] = useState("");
@@ -361,6 +362,16 @@ export function App() {
       ),
     [filteredItems]
   );
+  const activeQueueLabel = dailyReviewActive
+    ? "Daily Review"
+    : selectedStatus !== "all"
+      ? statusLabels[selectedStatus as SavedItemStatus]
+      : selectedSource !== "all"
+        ? sourceLabel(selectedSource)
+        : "All Items";
+  const activeQueueDescription = dailyReviewActive
+    ? `${filteredItems.length} inbox items for ${selectedDate}`
+    : `${filteredItems.length} visible after filters`;
 
   useEffect(
     () => () => {
@@ -607,7 +618,7 @@ export function App() {
   return (
     <>
       <header className="topbar">
-        <div>
+        <div className="topbar-title">
           <h1>Recall Inbox</h1>
           <p id="summary">
             {loadError
@@ -649,8 +660,9 @@ export function App() {
               onValueChange={changeStatus}
             />
           </div>
-          <Dialog.Root>
-            <Dialog.Trigger className="admin-trigger">Admin</Dialog.Trigger>
+          <div className="toolbar-meta">
+          <Dialog.Root open={adminOpen} onOpenChange={setAdminOpen}>
+            <Dialog.Trigger className="admin-trigger">Sources</Dialog.Trigger>
             <Dialog.Portal>
               <Dialog.Backdrop className="admin-backdrop" />
               <Dialog.Popup className="admin-dialog">
@@ -727,6 +739,7 @@ export function App() {
               </Dialog.Popup>
             </Dialog.Portal>
           </Dialog.Root>
+          </div>
         </div>
       </header>
 
@@ -757,41 +770,50 @@ export function App() {
         </aside>
 
         <section className="content-shell">
-          <div className="review-mode-strip" data-active={dailyReviewActive ? "true" : "false"}>
-            <div>
-              <span className="summary-label">Daily Review</span>
-              <strong>
-                {dailyReviewActive
-                  ? latestReviewDate ? `Reviewing ${latestReviewDate}` : "No review date"
-                  : latestReviewDate ? `${latestReviewDate} inbox` : "No items yet"}
-              </strong>
-              <span>
-                {dailyReviewActive
-                  ? `${filteredItems.length} items in focus`
-                  : `${latestReviewInboxCount} inbox items ready`}
-              </span>
+          <div className="workflow-board">
+            <div className="queue-header">
+              <div>
+                <span className="summary-label">Focus Queue</span>
+                <strong>{activeQueueLabel}</strong>
+              </div>
+              <span className="queue-description">{activeQueueDescription}</span>
             </div>
-            <button
-              type="button"
-              className="daily-review-button"
-              disabled={!latestReviewDate}
-              onClick={dailyReviewActive ? stopDailyReview : startDailyReview}
-            >
-              {dailyReviewActive ? "Exit review" : "Start daily review"}
-            </button>
-          </div>
-          <div className="queue-presets" aria-label="Focused queues">
-            {queuePresets.map((preset) => (
+            <div className="review-mode-strip" data-active={dailyReviewActive ? "true" : "false"}>
+              <div>
+                <span className="summary-label">Daily Review</span>
+                <strong>
+                  {dailyReviewActive
+                    ? latestReviewDate ? `Reviewing ${latestReviewDate}` : "No review date"
+                    : latestReviewDate ? `${latestReviewDate} inbox` : "No items yet"}
+                </strong>
+                <span>
+                  {dailyReviewActive
+                    ? `${filteredItems.length} items in focus`
+                    : `${latestReviewInboxCount} inbox items ready`}
+                </span>
+              </div>
               <button
-                key={preset.id}
                 type="button"
-                className={`queue-preset${isQueuePresetActive(preset) ? " active" : ""}`}
-                onClick={() => applyQueuePreset(preset)}
+                className="daily-review-button"
+                disabled={!latestReviewDate}
+                onClick={dailyReviewActive ? stopDailyReview : startDailyReview}
               >
-                <span>{preset.label}</span>
-                <strong>{preset.description}</strong>
+                {dailyReviewActive ? "Exit review" : "Start daily review"}
               </button>
-            ))}
+            </div>
+            <div className="queue-presets" aria-label="Focused queues">
+              {queuePresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className={`queue-preset${isQueuePresetActive(preset) ? " active" : ""}`}
+                  onClick={() => applyQueuePreset(preset)}
+                >
+                  <span>{preset.label}</span>
+                  <strong>{preset.description}</strong>
+                </button>
+              ))}
+            </div>
           </div>
           <div className="queue-summary" aria-label="Visible item summary">
             <div>
@@ -825,7 +847,19 @@ export function App() {
                 <div className="loading-card" />
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="empty">No matching items.</div>
+              <div className="empty-state">
+                <strong>{items.length === 0 ? "Connect a source" : "No matching items"}</strong>
+                <p>
+                  {items.length === 0
+                    ? "Open Sources to add credentials, authorize services, and run the first sync."
+                    : "Try another date, queue, source, or search term."}
+                </p>
+                {items.length === 0 ? (
+                  <button type="button" className="empty-action" onClick={() => setAdminOpen(true)}>
+                    Open Sources
+                  </button>
+                ) : null}
+              </div>
             ) : (
               filteredItems.map((item) => (
                 <ItemCard
@@ -977,34 +1011,40 @@ function ItemCard({
       onMouseEnter={onFocusItem}
     >
       <div className="item-header">
-        <div className="item-title">
-          <span className={`source-badge source-${item.source}`}>{sourceLabel(item.source)}</span>
-          <strong>{details?.repo || (item.authorHandle ? `@${item.authorHandle}` : item.authorName || "Unknown author")}</strong>
-          <span className={`status-badge status-${status}`}>{statusLabels[status]}</span>
+        <div className="item-primary-row">
+          <div className="item-main">
+            <div className="item-title">
+              <span className={`source-badge source-${item.source}`}>{sourceLabel(item.source)}</span>
+              <strong>{details?.repo || (item.authorHandle ? `@${item.authorHandle}` : item.authorName || "Unknown author")}</strong>
+              <span className={`status-badge status-${status}`}>{statusLabels[status]}</span>
+            </div>
+            <div className="meta">
+              <span>Created {item.createdLabel}</span>
+              <span>Discovered {item.discoveredLabel}</span>
+            </div>
+          </div>
+          <div className="item-side-actions">
+            <div className="status-actions" aria-label="Quick review actions">
+              {statusOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-label={`Mark as ${statusLabels[option]}`}
+                  className={`status-action status-${option}${status === option ? " active" : ""}`}
+                  onClick={() => onQuickStatus(option)}
+                >
+                  {statusLabels[option]}
+                </button>
+              ))}
+            </div>
+            <a className="open-link" href={item.url} target="_blank" rel="noreferrer">
+              Open
+            </a>
+          </div>
         </div>
-        <div className="status-actions" aria-label="Quick review actions">
-          {statusOptions.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-label={`Mark as ${statusLabels[option]}`}
-              className={`status-action status-${option}${status === option ? " active" : ""}`}
-              onClick={() => onQuickStatus(option)}
-            >
-              {statusLabels[option]}
-            </button>
-          ))}
-        </div>
-        <a className="open-link" href={item.url} target="_blank" rel="noreferrer">
-          Open
-        </a>
       </div>
       <div className="item-content">
         <div className="item-body">
-          <div className="meta">
-            <span>Created {item.createdLabel}</span>
-            <span>Discovered {item.discoveredLabel}</span>
-          </div>
           {details ? (
             <div className="github-details">
               {details.description ? <p className="item-text">{details.description}</p> : null}
@@ -1091,27 +1131,33 @@ function ReviewPanel({
       </Collapsible.Trigger>
       <Collapsible.Panel className="review-fields">
         <div className="review-editor">
-          <div className="review-form">
-          <label className="review-control">
-            Status
-            <BaseSelect
-              ariaLabel="Set review status"
-              options={statusSelectOptions}
-              value={normalizeStatus(item.status)}
-              onValueChange={(status) => onSave({ status: status as SavedItemStatus })}
-            />
-          </label>
-          <label className="review-control">
-            Tags
-            <Input defaultValue={tags.join(", ")} onBlur={(event) => saveTagsOnBlur(event.currentTarget.value)} />
-          </label>
-          <label className="review-control">
-            Note
-            <textarea rows={1} defaultValue={item.note || ""} onBlur={(event) => saveNoteOnBlur(event.target.value)} />
-          </label>
-          <div className={`review-save-state save-state ${saveState === "Save failed" ? "failed" : ""}`}>
-            {saveState}
+          <div className="review-workflow">
+            <span className="review-field-label">Workflow</span>
+            <div className="review-step-list" aria-label="Review workflow status">
+              {statusOptions.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={`review-step status-${status}${normalizeStatus(item.status) === status ? " active" : ""}`}
+                  onClick={() => onSave({ status })}
+                >
+                  {statusLabels[status]}
+                </button>
+              ))}
+            </div>
           </div>
+          <div className="review-form">
+            <label className="review-control">
+              <span className="review-field-label">Tags</span>
+              <Input defaultValue={tags.join(", ")} onBlur={(event) => saveTagsOnBlur(event.currentTarget.value)} />
+            </label>
+            <label className="review-control">
+              <span className="review-field-label">Note</span>
+              <textarea rows={1} defaultValue={item.note || ""} onBlur={(event) => saveNoteOnBlur(event.target.value)} />
+            </label>
+            <div className={`review-save-state save-state ${saveState === "Save failed" ? "failed" : ""}`}>
+              {saveState}
+            </div>
           </div>
         </div>
       </Collapsible.Panel>

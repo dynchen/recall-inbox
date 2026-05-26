@@ -206,6 +206,36 @@ test("review page keeps filters and review controls visually quiet", async () =>
   assert.doesNotMatch(css, /\.review-trigger\s*{[^}]*background: var\(--surface-muted\);/);
 });
 
+test("review page separates source setup, workflow, card hierarchy, and first-run states", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+
+  assert.match(app, /className="topbar-title"/);
+  assert.match(app, /className="toolbar-meta"/);
+  assert.match(app, /<Dialog\.Trigger className="admin-trigger">Sources<\/Dialog\.Trigger>/);
+  assert.match(app, /className="workflow-board"/);
+  assert.match(app, /className="queue-header"/);
+  assert.match(app, /className="queue-description"/);
+  assert.match(app, /className="item-primary-row"/);
+  assert.match(app, /className="item-main"/);
+  assert.match(app, /className="item-side-actions"/);
+  assert.match(app, /className="review-workflow"/);
+  assert.match(app, /className="review-step-list"/);
+  assert.match(app, /className="review-field-label"/);
+  assert.match(app, /className="empty-state"/);
+  assert.match(app, /Connect a source/);
+  assert.match(app, /Open Sources/);
+  assert.match(css, /\.topbar-title/);
+  assert.match(css, /\.toolbar-meta/);
+  assert.match(css, /\.workflow-board/);
+  assert.match(css, /\.queue-header/);
+  assert.match(css, /\.item-primary-row/);
+  assert.match(css, /\.item-side-actions/);
+  assert.match(css, /\.review-workflow/);
+  assert.match(css, /\.empty-state/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.queue-presets\s*{[\s\S]*overflow-x: auto;/);
+});
+
 test("review page supports a faster review workflow", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
