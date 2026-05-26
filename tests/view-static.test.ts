@@ -206,11 +206,14 @@ test("review page keeps filters and review controls visually quiet", async () =>
   assert.match(app, /className="workflow-filters"/);
   assert.match(app, /className="review-trigger-label"/);
   assert.match(app, /className="review-editor"/);
+  assert.match(app, /<p id="summary">[\s\S]*\{sourceControls\}[\s\S]*<\/p>/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*background: color-mix\(in srgb, var\(--surface\) 70%, transparent\);/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*border: 1px solid var\(--border-soft\);/);
   assert.match(css, /\.toolbar\s*{[\s\S]*max-width: 580px;/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*grid-template-columns: minmax\(220px, 1fr\);/);
   assert.match(css, /#search\s*{[\s\S]*height: 36px;/);
+  assert.match(css, /#summary\s*{[\s\S]*display: flex;/);
+  assert.match(css, /#summary\s*{[\s\S]*gap: 6px;/);
   assert.match(css, /\.workflow-filters/);
   assert.match(css, /\.workflow-filters \.select-trigger/);
   assert.match(css, /\.toolbar \.select-trigger\s*{[\s\S]*background: transparent;/);
@@ -232,6 +235,7 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.doesNotMatch(app, /className="toolbar-meta"/);
   assert.doesNotMatch(app, /className="side-tools"/);
   assert.match(app, /<Dialog\.Trigger className="source-text-trigger">Sources<\/Dialog\.Trigger>/);
+  assert.doesNotMatch(app, /<\/div>\s*\{sourceControls\}\s*<\/div>\s*<\/header>/);
   assert.match(app, /className="workflow-board"/);
   assert.match(app, /aria-label="Review filters"/);
   assert.match(app, /className="queue-header"/);

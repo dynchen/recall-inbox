@@ -726,11 +726,15 @@ export function App() {
         <div className="topbar-title">
           <h1>Recall Inbox</h1>
           <p id="summary">
-            {loadError
-              ? "Failed to load local items."
-              : loadingItems
-                ? "Loading items..."
-                : `${filteredItems.length} shown, ${items.length} stored`}
+            <span>
+              {loadError
+                ? "Failed to load local items."
+                : loadingItems
+                  ? "Loading items..."
+                  : `${filteredItems.length} shown, ${items.length} stored`}
+            </span>
+            <span aria-hidden="true">·</span>
+            {sourceControls}
           </p>
         </div>
         <div className="toolbar">
@@ -751,7 +755,6 @@ export function App() {
               onValueChange={changeDate}
             />
           </div>
-          {sourceControls}
         </div>
       </header>
 
