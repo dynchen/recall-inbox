@@ -73,3 +73,36 @@ test("fetchXBookmarks respects maxPages", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("fetchXBookmarks uses note_tweet text for long posts", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrls.push(String(input));
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: "1",
+            text: "short preview...",
+            note_tweet: { text: "full long post text that should be stored" },
+            author_id: "u1"
+          }
+        ],
+        includes: { users: [{ id: "u1", name: "User", username: "user" }] },
+        meta: {}
+      }),
+      { status: 200 }
+    );
+  }) as typeof fetch;
+
+  try {
+    const items = await fetchXBookmarks({ access_token: "token" }, "user-id");
+
+    assert.match(requestedUrls[0], /tweet\.fields=created_at%2Cauthor_id%2Cnote_tweet/);
+    assert.equal(items[0].text, "full long post text that should be stored");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

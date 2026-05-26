@@ -15,6 +15,9 @@ interface XTweet {
   text: string;
   created_at?: string;
   author_id?: string;
+  note_tweet?: {
+    text?: string;
+  };
 }
 
 interface XBookmarkResponse {
@@ -74,7 +77,7 @@ export async function fetchXBookmarks(
     fetchedPages += 1;
     const params = new URLSearchParams({
       max_results: "100",
-      "tweet.fields": "created_at,author_id",
+      "tweet.fields": "created_at,author_id,note_tweet",
       expansions: "author_id",
       "user.fields": "username,name"
     });
@@ -96,7 +99,7 @@ export async function fetchXBookmarks(
         url: `https://x.com/${author?.username ?? "i"}/status/${tweet.id}`,
         authorName: author?.name,
         authorHandle: author?.username,
-        text: tweet.text,
+        text: tweet.note_tweet?.text ?? tweet.text,
         discoveredAt: fetchedAt,
         createdAt: tweet.created_at,
         tags: []
