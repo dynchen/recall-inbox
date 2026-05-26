@@ -15,15 +15,35 @@ interface XTweet {
   text: string;
   created_at?: string;
   author_id?: string;
+  lang?: string;
+  possibly_sensitive?: boolean;
+  public_metrics?: Record<string, number>;
+  entities?: Record<string, unknown>;
+  attachments?: {
+    media_keys?: string[];
+  };
+  referenced_tweets?: Array<{
+    type: string;
+    id: string;
+  }>;
   note_tweet?: {
     text?: string;
   };
+}
+
+interface XMedia {
+  media_key: string;
+  type: string;
+  url?: string;
+  preview_image_url?: string;
 }
 
 interface XBookmarkResponse {
   data?: XTweet[];
   includes?: {
     users?: XUser[];
+    media?: XMedia[];
+    tweets?: XTweet[];
   };
   meta?: {
     next_token?: string;
@@ -63,6 +83,35 @@ export interface FetchXBookmarksOptions {
   maxPages?: number;
 }
 
+function compactObject<T extends Record<string, unknown>>(object: T): Partial<T> {
+  return Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined)) as Partial<T>;
+}
+
+function tweetMetadata(
+  tweet: XTweet,
+  mediaByKey: Map<string, XMedia>,
+  referencedTweetsById: Map<string, XTweet>
+): SavedItem["metadata"] | undefined {
+  const media = tweet.attachments?.media_keys
+    ?.map((mediaKey) => mediaByKey.get(mediaKey))
+    .filter((media): media is XMedia => Boolean(media));
+  const referencedTweetObjects = tweet.referenced_tweets
+    ?.map((referencedTweet) => referencedTweetsById.get(referencedTweet.id))
+    .filter((referencedTweet): referencedTweet is XTweet => Boolean(referencedTweet));
+  const x = compactObject({
+    lang: tweet.lang,
+    possiblySensitive: tweet.possibly_sensitive,
+    publicMetrics: tweet.public_metrics,
+    entities: tweet.entities,
+    attachments: tweet.attachments,
+    media: media?.length ? media : undefined,
+    referencedTweets: tweet.referenced_tweets,
+    referencedTweetObjects: referencedTweetObjects?.length ? referencedTweetObjects : undefined
+  });
+
+  return Object.keys(x).length ? { x } : undefined;
+}
+
 export async function fetchXBookmarks(
   token: XTokenSet,
   userId: string,
@@ -77,8 +126,9 @@ export async function fetchXBookmarks(
     fetchedPages += 1;
     const params = new URLSearchParams({
       max_results: "100",
-      "tweet.fields": "created_at,author_id,note_tweet",
-      expansions: "author_id",
+      "tweet.fields": "created_at,author_id,note_tweet,public_metrics,entities,attachments,referenced_tweets,lang,possibly_sensitive",
+      expansions: "author_id,attachments.media_keys,referenced_tweets.id",
+      "media.fields": "type,url,preview_image_url",
       "user.fields": "username,name"
     });
     if (nextToken) params.set("pagination_token", nextToken);
@@ -88,6 +138,8 @@ export async function fetchXBookmarks(
       token
     );
     const users = new Map((response.includes?.users ?? []).map((user) => [user.id, user]));
+    const mediaByKey = new Map((response.includes?.media ?? []).map((media) => [media.media_key, media]));
+    const referencedTweetsById = new Map((response.includes?.tweets ?? []).map((tweet) => [tweet.id, tweet]));
 
     const pageItems: SavedItem[] = [];
     for (const tweet of response.data ?? []) {
@@ -102,7 +154,8 @@ export async function fetchXBookmarks(
         text: tweet.note_tweet?.text ?? tweet.text,
         discoveredAt: fetchedAt,
         createdAt: tweet.created_at,
-        tags: []
+        tags: [],
+        metadata: tweetMetadata(tweet, mediaByKey, referencedTweetsById)
       });
     }
     items.push(...pageItems);

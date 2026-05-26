@@ -291,9 +291,9 @@ If you use X on Vercel, set the X Developer Portal callback URL to:
 https://<your-vercel-domain>/api/auth/x/callback
 ```
 
-Use `migrations/0001_initial.sql` as the schema source for the Postgres
-database. The table and index names are intentionally shared with D1 so the app
-logic can run against either store.
+Apply the SQL files in `migrations/` in filename order to initialize or upgrade
+the Postgres database. The table and index names are intentionally shared with
+D1 so the app logic can run against either store.
 
 The Vercel build command is:
 

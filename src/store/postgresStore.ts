@@ -16,6 +16,7 @@ interface ItemRow {
   discovered_at: string;
   created_at: string | null;
   tags_json: string | string[];
+  metadata_json: Record<string, unknown> | string | null;
   status: SavedItem["status"] | null;
   note: string | null;
 }
@@ -38,7 +39,13 @@ function tokenJson(value: XTokenSet | string): XTokenSet {
   return typeof value === "string" ? JSON.parse(value) as XTokenSet : value;
 }
 
+function metadataJson(value: Record<string, unknown> | string | null): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : value;
+}
+
 function rowToItem(row: ItemRow): SavedItem {
+  const metadata = metadataJson(row.metadata_json);
   return {
     id: row.id,
     source: row.source,
@@ -51,7 +58,8 @@ function rowToItem(row: ItemRow): SavedItem {
     createdAt: row.created_at ?? undefined,
     tags: jsonArray(row.tags_json),
     status: row.status ?? "inbox",
-    note: row.note ?? ""
+    note: row.note ?? "",
+    ...(metadata ? { metadata } : {})
   };
 }
 
@@ -65,7 +73,7 @@ export class PostgresStore implements AssistantStore {
   async readState(): Promise<StoredState> {
     const rows = await this.sql<ItemRow[]>`
       SELECT id, source, source_item_id, url, author_name, author_handle, text,
-        discovered_at, created_at, tags_json, status, note
+        discovered_at, created_at, tags_json, metadata_json, status, note
       FROM items
       ORDER BY discovered_at DESC
     `;
@@ -78,12 +86,12 @@ export class PostgresStore implements AssistantStore {
         await sql`
           INSERT INTO items (
             id, source, source_item_id, url, author_name, author_handle, text,
-            discovered_at, created_at, tags_json, status, note
+            discovered_at, created_at, tags_json, metadata_json, status, note
           ) VALUES (
             ${item.id}, ${item.source}, ${item.sourceItemId}, ${item.url},
             ${item.authorName ?? null}, ${item.authorHandle ?? null}, ${item.text},
             ${item.discoveredAt}, ${item.createdAt ?? null}, ${JSON.stringify(item.tags ?? [])},
-            ${item.status ?? "inbox"}, ${item.note ?? ""}
+            ${item.metadata ? JSON.stringify(item.metadata) : null}, ${item.status ?? "inbox"}, ${item.note ?? ""}
           )
           ON CONFLICT(id) DO UPDATE SET
             source = excluded.source,
@@ -95,6 +103,7 @@ export class PostgresStore implements AssistantStore {
             discovered_at = excluded.discovered_at,
             created_at = excluded.created_at,
             tags_json = excluded.tags_json,
+            metadata_json = excluded.metadata_json,
             status = excluded.status,
             note = excluded.note
         `;

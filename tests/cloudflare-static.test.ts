@@ -13,7 +13,9 @@ test("cloudflare worker exposes fetch and scheduled handlers", async () => {
 
 test("cloudflare deployment uses D1, static assets, and daily cron", async () => {
   const wranglerExample = await readFile("wrangler.example.toml", "utf8");
-  const migration = await readFile("migrations/0001_initial.sql", "utf8");
+  const initialMigration = await readFile("migrations/0001_initial.sql", "utf8");
+  const metadataMigration = await readFile("migrations/0002_item_metadata.sql", "utf8");
+  const migration = `${initialMigration}\n${metadataMigration}`;
 
   assert.match(wranglerExample, /main = "dist\/src\/worker\.js"/);
   assert.match(wranglerExample, /binding = "DB"/);
@@ -24,6 +26,7 @@ test("cloudflare deployment uses D1, static assets, and daily cron", async () =>
   assert.doesNotMatch(wranglerExample, /a1f659ee-a726-43a9-800b-aaf70585dcdb/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS items/);
   assert.match(migration, /status TEXT NOT NULL DEFAULT 'inbox'/);
+  assert.match(migration, /metadata_json TEXT/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS source_tokens/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS oauth_states/);
   assert.match(migration, /code_verifier TEXT NOT NULL/);

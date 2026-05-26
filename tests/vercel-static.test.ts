@@ -23,6 +23,7 @@ test("vercel deployment exposes api adapters and cron configuration", async () =
   assert.match(vercelRuntime, /PostgresStore/);
   assert.match(readme, /Vercel Deployment/);
   assert.match(readme, /POSTGRES_URL/);
+  assert.match(readme, /Apply the SQL files in `migrations\/` in filename order/);
   await access("api/auth/x/start.ts");
   await access("api/auth/x/callback.ts");
 });

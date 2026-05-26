@@ -46,6 +46,17 @@ test("mergeItems preserves local review fields on existing items", () => {
   assert.equal(merged[0].note, "reviewed");
 });
 
+test("mergeItems keeps incoming source metadata on existing items", () => {
+  const existing = item("x:1", "2026-05-24T00:00:00.000Z", "old");
+  existing.metadata = { x: { publicMetrics: { like_count: 1 } } };
+  const incoming = item("x:1", "2026-05-25T00:00:00.000Z", "new");
+  incoming.metadata = { x: { publicMetrics: { like_count: 10 } } };
+
+  const merged = mergeItems([existing], [incoming]);
+
+  assert.deepEqual(merged[0].metadata, { x: { publicMetrics: { like_count: 10 } } });
+});
+
 test("JsonStore migrates legacy bookmarkedAt to discoveredAt", async () => {
   const dataDir = await mkdtemp(path.join(tmpdir(), "assistant-store-"));
   await writeFile(

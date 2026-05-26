@@ -25,6 +25,7 @@ interface ItemRow {
   discovered_at: string;
   created_at: string | null;
   tags_json: string;
+  metadata_json: string | null;
   status: SavedItem["status"] | null;
   note: string | null;
 }
@@ -40,6 +41,7 @@ interface OAuthStateRow {
 }
 
 function rowToItem(row: ItemRow): SavedItem {
+  const metadata = row.metadata_json ? JSON.parse(row.metadata_json) as Record<string, unknown> : undefined;
   return {
     id: row.id,
     source: row.source,
@@ -52,7 +54,8 @@ function rowToItem(row: ItemRow): SavedItem {
     createdAt: row.created_at ?? undefined,
     tags: JSON.parse(row.tags_json) as string[],
     status: row.status ?? "inbox",
-    note: row.note ?? ""
+    note: row.note ?? "",
+    ...(metadata ? { metadata } : {})
   };
 }
 
@@ -68,6 +71,7 @@ function bindItem(statement: D1PreparedStatement, item: SavedItem): D1PreparedSt
     item.discoveredAt,
     item.createdAt ?? null,
     JSON.stringify(item.tags ?? []),
+    item.metadata ? JSON.stringify(item.metadata) : null,
     item.status ?? "inbox",
     item.note ?? ""
   );
@@ -80,7 +84,7 @@ export class D1Store implements AssistantStore {
     const result = await this.db
       .prepare(
         `SELECT id, source, source_item_id, url, author_name, author_handle, text,
-          discovered_at, created_at, tags_json, status, note
+          discovered_at, created_at, tags_json, metadata_json, status, note
         FROM items
         ORDER BY discovered_at DESC`
       )
@@ -91,8 +95,8 @@ export class D1Store implements AssistantStore {
   async writeState(state: StoredState): Promise<void> {
     const query = `INSERT INTO items (
       id, source, source_item_id, url, author_name, author_handle, text,
-      discovered_at, created_at, tags_json, status, note
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      discovered_at, created_at, tags_json, metadata_json, status, note
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       source = excluded.source,
       source_item_id = excluded.source_item_id,
@@ -103,6 +107,7 @@ export class D1Store implements AssistantStore {
       discovered_at = excluded.discovered_at,
       created_at = excluded.created_at,
       tags_json = excluded.tags_json,
+      metadata_json = excluded.metadata_json,
       status = excluded.status,
       note = excluded.note`;
     const statements = state.items.map((item) => bindItem(this.db.prepare(query), item));

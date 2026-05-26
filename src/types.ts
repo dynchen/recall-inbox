@@ -14,6 +14,7 @@ export interface SavedItem {
   tags: string[];
   status?: SavedItemStatus;
   note?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface StoredState {
