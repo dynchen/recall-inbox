@@ -32,7 +32,8 @@ test("review page clamps short text with many lines", async () => {
 
   assert.match(app, /function shouldClampText/);
   assert.match(app, /split\(\s*\/\\r\?\\n\/\s*\)\.length > 4/);
-  assert.match(app, /const shouldClamp = shouldClampText\(item\.text\);/);
+  assert.match(app, /shouldClamp: shouldClampText\(item\.text\)/);
+  assert.match(app, /const shouldClamp = item\.shouldClamp;/);
   assert.match(app, /shouldClamp && !expanded && !details/);
   assert.match(app, /shouldClamp && !expanded && !details \?/);
   assert.match(app, /className="text-toggle"[\s\S]*Expand/);
@@ -269,6 +270,31 @@ test("review page exposes queue presets for focused filters", async () => {
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.queue-presets\s*{[^}]*grid-template-columns: 1fr;/);
   assert.match(roadmap, /Basic queue presets now cover unreviewed, action, and source-specific review flows\./);
   assert.doesNotMatch(roadmap, /Improve filters for unreviewed items, action items, and source-specific\s+queues\./);
+});
+
+test("review page precomputes item view data for faster filtering", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+
+  assert.match(app, /useDeferredValue/);
+  assert.match(app, /interface ViewItem extends SavedItem/);
+  assert.match(app, /function buildSearchText/);
+  assert.match(app, /const deferredQuery = useDeferredValue\(query\)/);
+  assert.match(app, /const viewItems = useMemo/);
+  assert.match(app, /dateKey: itemDate\(item\)/);
+  assert.match(app, /sortKey: item\.createdAt \|\| item\.discoveredAt/);
+  assert.match(app, /normalizedStatus: normalizeStatus\(item\.status\)/);
+  assert.match(app, /searchText: buildSearchText\(item\)/);
+  assert.match(app, /createdLabel: formatDateTime\(item\.createdAt\)/);
+  assert.match(app, /discoveredLabel: formatDateTime\(item\.discoveredAt\)/);
+  assert.match(app, /details: githubDetails\(item\)/);
+  assert.match(app, /shouldClamp: shouldClampText\(item\.text\)/);
+  assert.match(app, /const sortedViewItems = useMemo/);
+  assert.match(app, /sortItems\(viewItems\)/);
+  assert.match(app, /matchesQuery\(item, deferredQuery\)/);
+  assert.doesNotMatch(app, /sortItems\(items\)\s*\n\s*\.filter/);
+  assert.match(css, /\.item-card\s*{[\s\S]*content-visibility: auto;/);
+  assert.match(css, /\.item-card\s*{[\s\S]*contain-intrinsic-size: 220px;/);
 });
 
 test("review page exposes protected manual sync controls", async () => {

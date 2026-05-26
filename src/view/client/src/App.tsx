@@ -3,7 +3,7 @@ import { Collapsible } from "@base-ui/react/collapsible";
 import { Dialog } from "@base-ui/react/dialog";
 import { Select } from "@base-ui/react/select";
 import type { ComponentProps } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 type SavedItemStatus = "inbox" | "keep" | "action" | "dismiss";
 
@@ -40,6 +40,17 @@ interface QueuePreset {
   status: SavedItemStatus;
 }
 
+interface ViewItem extends SavedItem {
+  createdLabel: string;
+  dateKey: string;
+  details: GitHubDetails | null;
+  discoveredLabel: string;
+  normalizedStatus: SavedItemStatus;
+  searchText: string;
+  shouldClamp: boolean;
+  sortKey: string;
+}
+
 type SyncSource = "all" | "x" | "github";
 type SourceSync = Exclude<SyncSource, "all">;
 
@@ -65,6 +76,14 @@ interface SourceStatus {
 
 interface AdminStatus {
   sources: Record<SourceSync, SourceStatus>;
+}
+
+interface GitHubDetails {
+  description: string;
+  language?: string;
+  repo: string;
+  stars?: string;
+  topics: string[];
 }
 
 const statusOptions: SavedItemStatus[] = ["inbox", "keep", "action", "dismiss"];
@@ -134,24 +153,29 @@ function shortcutStatus(key: string): SavedItemStatus | undefined {
   return undefined;
 }
 
-function sortItems(items: SavedItem[]): SavedItem[] {
+function sortItems<T extends { sortKey: string }>(items: T[]): T[] {
   return [...items].sort((a, b) =>
-    (b.createdAt || b.discoveredAt).localeCompare(a.createdAt || a.discoveredAt)
+    b.sortKey.localeCompare(a.sortKey)
   );
 }
 
-function matchesQuery(item: SavedItem, query: string): boolean {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return true;
+function buildSearchText(item: SavedItem): string {
   return [item.text, item.authorName, item.authorHandle, ...(item.tags || [])]
     .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(normalized));
+    .join("\n")
+    .toLowerCase();
 }
 
-function buildDateCounts(items: SavedItem[]): DateCount[] {
+function matchesQuery(item: ViewItem, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return item.searchText.includes(normalized);
+}
+
+function buildDateCounts(items: { dateKey: string }[]): DateCount[] {
   const counts = new Map<string, number>();
   for (const item of items) {
-    const date = itemDate(item);
+    const date = item.dateKey;
     counts.set(date, (counts.get(date) || 0) + 1);
   }
   return [...counts.entries()]
@@ -171,13 +195,7 @@ function splitTopics(topics?: string): string[] {
     .filter(Boolean);
 }
 
-function githubDetails(item: SavedItem): {
-  description: string;
-  language?: string;
-  repo: string;
-  stars?: string;
-  topics: string[];
-} | null {
+function githubDetails(item: SavedItem): GitHubDetails | null {
   if (item.source !== "github") return null;
   const lines = item.text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const repo = item.sourceItemId || lines[0] || item.authorName || "GitHub repository";
@@ -200,6 +218,7 @@ function githubDetails(item: SavedItem): {
 export function App() {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [selectedDate, setSelectedDate] = useState("all");
   const [selectedSource, setSelectedSource] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -228,14 +247,30 @@ export function App() {
     loadItems().catch(() => setLoadError(true));
   }, []);
 
-  const dateCounts = useMemo(() => buildDateCounts(items), [items]);
+  const viewItems = useMemo<ViewItem[]>(
+    () =>
+      items.map((item) => ({
+        ...item,
+        createdLabel: formatDateTime(item.createdAt),
+        dateKey: itemDate(item),
+        details: githubDetails(item),
+        discoveredLabel: formatDateTime(item.discoveredAt),
+        normalizedStatus: normalizeStatus(item.status),
+        searchText: buildSearchText(item),
+        shouldClamp: shouldClampText(item.text),
+        sortKey: item.createdAt || item.discoveredAt
+      })),
+    [items]
+  );
+  const sortedViewItems = useMemo(() => sortItems(viewItems), [viewItems]);
+  const dateCounts = useMemo(() => buildDateCounts(viewItems), [viewItems]);
   const latestReviewDate = dateCounts[0]?.date;
   const latestReviewInboxCount = useMemo(
     () =>
       latestReviewDate
-        ? items.filter((item) => itemDate(item) === latestReviewDate && normalizeStatus(item.status) === "inbox").length
+        ? viewItems.filter((item) => item.dateKey === latestReviewDate && item.normalizedStatus === "inbox").length
         : 0,
-    [items, latestReviewDate]
+    [latestReviewDate, viewItems]
   );
   const dateOptions = useMemo(
     () => [
@@ -244,27 +279,27 @@ export function App() {
     ],
     [dateCounts, items.length]
   );
-  const sources = useMemo(() => [...new Set(items.map((item) => item.source))].sort(), [items]);
+  const sources = useMemo(() => [...new Set(viewItems.map((item) => item.source))].sort(), [viewItems]);
   const allStatusCounts = useMemo(
     () =>
-      items.reduce(
+      viewItems.reduce(
         (counts, item) => {
-          counts[normalizeStatus(item.status)] += 1;
+          counts[item.normalizedStatus] += 1;
           return counts;
         },
         { inbox: 0, keep: 0, action: 0, dismiss: 0 } as Record<SavedItemStatus, number>
       ),
-    [items]
+    [viewItems]
   );
   const sourceInboxCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const item of items) {
-      if (normalizeStatus(item.status) === "inbox") {
+    for (const item of viewItems) {
+      if (item.normalizedStatus === "inbox") {
         counts.set(item.source, (counts.get(item.source) || 0) + 1);
       }
     }
     return counts;
-  }, [items]);
+  }, [viewItems]);
   const queuePresets = useMemo<QueuePreset[]>(
     () => [
       {
@@ -300,18 +335,18 @@ export function App() {
   );
   const filteredItems = useMemo(
     () =>
-      sortItems(items)
-        .filter((item) => selectedDate === "all" || itemDate(item) === selectedDate)
+      sortedViewItems
+        .filter((item) => selectedDate === "all" || item.dateKey === selectedDate)
         .filter((item) => selectedSource === "all" || item.source === selectedSource)
-        .filter((item) => selectedStatus === "all" || normalizeStatus(item.status) === selectedStatus)
-        .filter((item) => matchesQuery(item, query)),
-    [items, query, selectedDate, selectedSource, selectedStatus]
+        .filter((item) => selectedStatus === "all" || item.normalizedStatus === selectedStatus)
+        .filter((item) => matchesQuery(item, deferredQuery)),
+    [deferredQuery, selectedDate, selectedSource, selectedStatus, sortedViewItems]
   );
   const visibleStatusCounts = useMemo(
     () =>
       filteredItems.reduce(
         (counts, item) => {
-          counts[normalizeStatus(item.status)] += 1;
+          counts[item.normalizedStatus] += 1;
           return counts;
         },
         { inbox: 0, keep: 0, action: 0, dismiss: 0 } as Record<SavedItemStatus, number>
@@ -890,7 +925,7 @@ function ItemCard({
   onQuickStatus,
   onSave
 }: {
-  item: SavedItem;
+  item: ViewItem;
   expanded: boolean;
   reviewOpen: boolean;
   saveState: string;
@@ -901,9 +936,9 @@ function ItemCard({
   onQuickStatus: (status: SavedItemStatus) => void;
   onSave: (patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) => void;
 }) {
-  const status = normalizeStatus(item.status);
-  const details = githubDetails(item);
-  const shouldClamp = shouldClampText(item.text);
+  const status = item.normalizedStatus;
+  const details = item.details;
+  const shouldClamp = item.shouldClamp;
 
   return (
     <article
@@ -939,8 +974,8 @@ function ItemCard({
       <div className="item-content">
         <div className="item-body">
           <div className="meta">
-            <span>Created {formatDateTime(item.createdAt)}</span>
-            <span>Discovered {formatDateTime(item.discoveredAt)}</span>
+            <span>Created {item.createdLabel}</span>
+            <span>Discovered {item.discoveredLabel}</span>
           </div>
           {details ? (
             <div className="github-details">
