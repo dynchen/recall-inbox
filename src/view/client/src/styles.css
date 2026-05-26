@@ -66,7 +66,7 @@ textarea {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  max-width: 760px;
+  max-width: 520px;
   width: 100%;
 }
 
@@ -77,7 +77,7 @@ textarea {
   border-radius: 8px;
   display: grid;
   gap: 1px;
-  grid-template-columns: minmax(260px, 1fr);
+  grid-template-columns: minmax(220px, 1fr);
   overflow: hidden;
   width: 100%;
 }
@@ -288,9 +288,9 @@ p {
   background: transparent;
   border: 0;
   border-radius: 0;
-  font-size: 14px;
-  height: 40px;
-  padding: 9px 12px;
+  font-size: 13px;
+  height: 36px;
+  padding: 8px 11px;
 }
 
 .toolbar .select-field {

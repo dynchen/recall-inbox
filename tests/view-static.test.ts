@@ -196,7 +196,9 @@ test("review page keeps filters and review controls visually quiet", async () =>
   assert.match(app, /className="review-editor"/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*background: color-mix\(in srgb, var\(--surface\) 70%, transparent\);/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*border: 1px solid var\(--border-soft\);/);
-  assert.match(css, /\.toolbar-panel\s*{[\s\S]*grid-template-columns: minmax\(260px, 1fr\);/);
+  assert.match(css, /\.toolbar\s*{[\s\S]*max-width: 520px;/);
+  assert.match(css, /\.toolbar-panel\s*{[\s\S]*grid-template-columns: minmax\(220px, 1fr\);/);
+  assert.match(css, /#search\s*{[\s\S]*height: 36px;/);
   assert.match(css, /\.workflow-filters/);
   assert.match(css, /\.workflow-filters \.select-trigger/);
   assert.match(css, /\.toolbar \.select-trigger\s*{[\s\S]*background: transparent;/);
