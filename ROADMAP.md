@@ -22,12 +22,11 @@ These are the highest-value improvements for early users and contributors.
 
 ### Review Workflow
 
-- Add keyboard shortcuts for common review actions.
+- Basic queue presets now cover unreviewed, action, and source-specific review flows.
+- Continue refining keyboard shortcuts for common review actions.
 - Add batch actions for selected items.
-- Improve filters for unreviewed items, action items, and source-specific
-  queues.
-- Add a daily review view that focuses on newly synced items instead of the full
-  archive.
+- Expand Daily Review from the latest inbox queue into a configurable review
+  window for newly synced items.
 
 ### Action Exports
 

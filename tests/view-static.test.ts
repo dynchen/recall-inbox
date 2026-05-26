@@ -242,6 +242,35 @@ test("review page exposes a daily review view", async () => {
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.review-mode-strip\s*{[^}]*grid-template-columns: 1fr;/);
 });
 
+test("review page exposes queue presets for focused filters", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+  const roadmap = await readFile("ROADMAP.md", "utf8");
+
+  assert.match(app, /interface QueuePreset/);
+  assert.match(app, /const queuePresets = useMemo/);
+  assert.match(app, /id: "unreviewed"/);
+  assert.match(app, /label: "Unreviewed"/);
+  assert.match(app, /id: "action-items"/);
+  assert.match(app, /label: "Action items"/);
+  assert.match(app, /sources\.map\(\(source\) => \(\{/);
+  assert.match(app, /label: `\$\{sourceLabel\(source\)\} inbox`/);
+  assert.match(app, /function applyQueuePreset/);
+  assert.match(app, /setDailyReviewActive\(false\)/);
+  assert.match(app, /setSelectedDate\("all"\)/);
+  assert.match(app, /setSelectedSource\(preset\.source\)/);
+  assert.match(app, /setSelectedStatus\(preset\.status\)/);
+  assert.match(app, /className="queue-presets"/);
+  assert.match(app, /aria-label="Focused queues"/);
+  assert.match(app, /className=\{`queue-preset/);
+  assert.match(css, /\.queue-presets/);
+  assert.match(css, /\.queue-preset/);
+  assert.match(css, /\.queue-preset\.active/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.queue-presets\s*{[^}]*grid-template-columns: 1fr;/);
+  assert.match(roadmap, /Basic queue presets now cover unreviewed, action, and source-specific review flows\./);
+  assert.doesNotMatch(roadmap, /Improve filters for unreviewed items, action items, and source-specific\s+queues\./);
+});
+
 test("review page exposes protected manual sync controls", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");

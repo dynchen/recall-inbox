@@ -32,6 +32,14 @@ interface SelectOption {
   value: string;
 }
 
+interface QueuePreset {
+  id: string;
+  label: string;
+  description: string;
+  source: string;
+  status: SavedItemStatus;
+}
+
 type SyncSource = "all" | "x" | "github";
 type SourceSync = Exclude<SyncSource, "all">;
 
@@ -237,6 +245,52 @@ export function App() {
     [dateCounts, items.length]
   );
   const sources = useMemo(() => [...new Set(items.map((item) => item.source))].sort(), [items]);
+  const allStatusCounts = useMemo(
+    () =>
+      items.reduce(
+        (counts, item) => {
+          counts[normalizeStatus(item.status)] += 1;
+          return counts;
+        },
+        { inbox: 0, keep: 0, action: 0, dismiss: 0 } as Record<SavedItemStatus, number>
+      ),
+    [items]
+  );
+  const sourceInboxCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      if (normalizeStatus(item.status) === "inbox") {
+        counts.set(item.source, (counts.get(item.source) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [items]);
+  const queuePresets = useMemo<QueuePreset[]>(
+    () => [
+      {
+        id: "unreviewed",
+        label: "Unreviewed",
+        description: `${allStatusCounts.inbox} inbox`,
+        source: "all",
+        status: "inbox"
+      },
+      {
+        id: "action-items",
+        label: "Action items",
+        description: `${allStatusCounts.action} action`,
+        source: "all",
+        status: "action"
+      },
+      ...sources.map((source) => ({
+        id: `${source}-inbox`,
+        label: `${sourceLabel(source)} inbox`,
+        description: `${sourceInboxCounts.get(source) || 0} inbox`,
+        source,
+        status: "inbox" as SavedItemStatus
+      }))
+    ],
+    [allStatusCounts.action, allStatusCounts.inbox, sourceInboxCounts, sources]
+  );
   const sourceOptions = useMemo(
     () => [
       { label: "All sources", value: "all" },
@@ -339,6 +393,23 @@ export function App() {
       setDailyReviewActive(false);
     }
     setSelectedStatus(nextStatus);
+  }
+
+  function applyQueuePreset(preset: QueuePreset) {
+    setDailyReviewActive(false);
+    setSelectedDate("all");
+    setSelectedSource(preset.source);
+    setSelectedStatus(preset.status);
+    setFocusedItemId("");
+  }
+
+  function isQueuePresetActive(preset: QueuePreset) {
+    return (
+      !dailyReviewActive &&
+      selectedDate === "all" &&
+      selectedSource === preset.source &&
+      selectedStatus === preset.status
+    );
   }
 
   function startDailyReview() {
@@ -652,6 +723,19 @@ export function App() {
             >
               {dailyReviewActive ? "Exit review" : "Start daily review"}
             </button>
+          </div>
+          <div className="queue-presets" aria-label="Focused queues">
+            {queuePresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={`queue-preset${isQueuePresetActive(preset) ? " active" : ""}`}
+                onClick={() => applyQueuePreset(preset)}
+              >
+                <span>{preset.label}</span>
+                <strong>{preset.description}</strong>
+              </button>
+            ))}
           </div>
           <div className="queue-summary" aria-label="Visible item summary">
             <div>
