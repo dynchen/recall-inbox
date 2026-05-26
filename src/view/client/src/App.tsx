@@ -113,6 +113,19 @@ function normalizeStatus(status?: string): SavedItemStatus {
   return statusOptions.includes(status as SavedItemStatus) ? (status as SavedItemStatus) : "inbox";
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+function shortcutStatus(key: string): SavedItemStatus | undefined {
+  const normalized = key.toLowerCase();
+  if (normalized === "i") return "inbox";
+  if (normalized === "k") return "keep";
+  if (normalized === "a") return "action";
+  if (normalized === "d") return "dismiss";
+  return undefined;
+}
+
 function sortItems(items: SavedItem[]): SavedItem[] {
   return [...items].sort((a, b) =>
     (b.createdAt || b.discoveredAt).localeCompare(a.createdAt || a.discoveredAt)
@@ -189,6 +202,7 @@ export function App() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => new Set());
   const [openReviewItems, setOpenReviewItems] = useState<Set<string>>(() => new Set());
   const [savingItems, setSavingItems] = useState<Map<string, string>>(() => new Map());
+  const [focusedItemId, setFocusedItemId] = useState("");
   const [itemsAnimating, setItemsAnimating] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const itemsAnimationTimer = useRef<number | undefined>(undefined);
@@ -250,6 +264,40 @@ export function App() {
     },
     []
   );
+
+  useEffect(() => {
+    if (!filteredItems.length) {
+      setFocusedItemId("");
+      return;
+    }
+    if (!filteredItems.some((item) => item.id === focusedItemId)) {
+      setFocusedItemId(filteredItems[0].id);
+    }
+  }, [filteredItems, focusedItemId]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
+      const focusedItem = filteredItems.find((item) => item.id === focusedItemId) || filteredItems[0];
+      if (!focusedItem) return;
+
+      if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        setFocusedItemId(focusedItem.id);
+        setReviewOpen(focusedItem.id, true);
+        return;
+      }
+
+      const status = shortcutStatus(event.key);
+      if (!status) return;
+      event.preventDefault();
+      setFocusedItemId(focusedItem.id);
+      saveItem(focusedItem.id, { status });
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredItems, focusedItemId]);
 
   function finishItemsAnimation(delay = 160) {
     if (itemsAnimationTimer.current !== undefined) {
@@ -580,8 +628,11 @@ export function App() {
                   expanded={expandedItems.has(item.id)}
                   reviewOpen={openReviewItems.has(item.id)}
                   saveState={savingItems.get(item.id) || "Saved"}
+                  focused={focusedItemId === item.id}
                   onToggleExpanded={() => toggleExpanded(item.id)}
                   onReviewOpenChange={(open) => setReviewOpen(item.id, open)}
+                  onFocusItem={() => setFocusedItemId(item.id)}
+                  onQuickStatus={(status) => saveItem(item.id, { status })}
                   onSave={(patch) => saveItem(item.id, patch)}
                 />
               ))
@@ -689,16 +740,22 @@ function ItemCard({
   expanded,
   reviewOpen,
   saveState,
+  focused,
   onToggleExpanded,
   onReviewOpenChange,
+  onFocusItem,
+  onQuickStatus,
   onSave
 }: {
   item: SavedItem;
   expanded: boolean;
   reviewOpen: boolean;
   saveState: string;
+  focused: boolean;
   onToggleExpanded: () => void;
   onReviewOpenChange: (open: boolean) => void;
+  onFocusItem: () => void;
+  onQuickStatus: (status: SavedItemStatus) => void;
   onSave: (patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) => void;
 }) {
   const status = normalizeStatus(item.status);
@@ -706,12 +763,31 @@ function ItemCard({
   const shouldClamp = shouldClampText(item.text);
 
   return (
-    <article className={`item-card status-${status}`}>
+    <article
+      className={`item-card status-${status}${focused ? " active-review-item" : ""}`}
+      aria-current={focused ? "true" : undefined}
+      tabIndex={0}
+      onFocus={onFocusItem}
+      onMouseEnter={onFocusItem}
+    >
       <div className="item-header">
         <div className="item-title">
           <span className={`source-badge source-${item.source}`}>{sourceLabel(item.source)}</span>
           <strong>{details?.repo || (item.authorHandle ? `@${item.authorHandle}` : item.authorName || "Unknown author")}</strong>
           <span className={`status-badge status-${status}`}>{statusLabels[status]}</span>
+        </div>
+        <div className="status-actions" aria-label="Quick review actions">
+          {statusOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-label={`Mark as ${statusLabels[option]}`}
+              className={`status-action status-${option}${status === option ? " active" : ""}`}
+              onClick={() => onQuickStatus(option)}
+            >
+              {statusLabels[option]}
+            </button>
+          ))}
         </div>
         <a className="open-link" href={item.url} target="_blank" rel="noreferrer">
           Open

@@ -486,6 +486,15 @@ textarea:focus,
   transform: translateY(-1px);
 }
 
+.item-card:focus-visible,
+.item-card.active-review-item {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent),
+    var(--shadow-soft);
+  outline: 0;
+}
+
 .item-card.status-inbox .status-badge {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--warning) 10%, transparent);
 }
@@ -590,6 +599,53 @@ textarea:focus,
 
 .open-link:hover {
   background: var(--accent-muted);
+}
+
+.status-actions {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 78%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+}
+
+.status-action {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1;
+  min-height: 24px;
+  padding: 5px 7px;
+}
+
+.status-action:hover,
+.status-action.active {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.status-action.status-action.active {
+  color: var(--accent);
+}
+
+.status-action.status-keep.active {
+  color: var(--success);
+}
+
+.status-action.status-dismiss.active {
+  color: var(--text-muted);
+}
+
+.status-action.status-inbox.active {
+  color: var(--warning);
 }
 
 .item-content {
@@ -1112,6 +1168,15 @@ textarea {
 
   .item-header {
     gap: 10px;
+  }
+
+  .status-actions {
+    order: 3;
+    width: 100%;
+  }
+
+  .status-action {
+    flex: 1 1 0;
   }
 
   .meta {

@@ -196,6 +196,28 @@ test("review page keeps filters and review controls visually quiet", async () =>
   assert.doesNotMatch(css, /\.review-trigger\s*{[^}]*background: var\(--surface-muted\);/);
 });
 
+test("review page supports a faster review workflow", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+
+  assert.match(app, /const \[focusedItemId, setFocusedItemId\]/);
+  assert.match(app, /function isEditableTarget/);
+  assert.match(app, /function shortcutStatus/);
+  assert.match(app, /window\.addEventListener\("keydown", handleKeyDown\)/);
+  assert.match(app, /saveItem\(focusedItem\.id, \{ status \}\)/);
+  assert.match(app, /setReviewOpen\(focusedItem\.id, true\)/);
+  assert.match(app, /focused=\{focusedItemId === item\.id\}/);
+  assert.match(app, /onFocusItem=\{\(\) => setFocusedItemId\(item\.id\)\}/);
+  assert.match(app, /onQuickStatus=\{\(status\) => saveItem\(item\.id, \{ status \}\)\}/);
+  assert.match(app, /className="status-actions"/);
+  assert.match(app, /aria-label=\{`Mark as \$\{statusLabels\[option\]\}`\}/);
+  assert.match(app, /className=\{`status-action status-\$\{option\}/);
+  assert.match(css, /\.item-card\.active-review-item/);
+  assert.match(css, /\.status-actions/);
+  assert.match(css, /\.status-action/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.status-actions\s*{[^}]*width: 100%;/);
+});
+
 test("review page exposes protected manual sync controls", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
