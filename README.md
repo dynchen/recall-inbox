@@ -42,7 +42,7 @@ store is empty. Use `yarn demo -- --force` to replace existing local sample data
 
 ## Deployment Options
 
-- Local only: use `.data/items.json`, `yarn sync`, `yarn sync:github`, and
+- Local only: use `.data/items.json`, `yarn sync:x`, `yarn sync:github`, and
   `yarn view`.
 - Cloudflare: deploy the review UI, API, D1 database, and scheduled sync with
   `yarn cf:release`.
@@ -103,7 +103,7 @@ yarn auth:x
 Run the sync command for each source you configured:
 
 ```bash
-yarn sync
+yarn sync:x
 yarn sync:github
 ```
 

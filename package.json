@@ -9,7 +9,7 @@
     "dev": "vite --host 127.0.0.1 --port 17865",
     "test": "tsc -p tsconfig.json && vite build && node --test \"dist/**/*.test.js\"",
     "auth:x": "node dist/src/cli.js auth:x",
-    "sync": "node dist/src/cli.js sync",
+    "sync:x": "node dist/src/cli.js sync:x",
     "sync:github": "node dist/src/cli.js sync:github",
     "export:md": "node dist/src/cli.js export:md",
     "demo": "node scripts/seed-demo.mjs",

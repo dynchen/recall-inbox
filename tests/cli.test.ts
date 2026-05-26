@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-function scriptEntry(commandName: "auth:x" | "sync" | "sync:github" | "export:md" | "view"): string {
+function scriptEntry(commandName: "auth:x" | "sync:x" | "sync:github" | "export:md" | "view"): string {
   const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
     scripts: Record<string, string>;
   };
@@ -19,11 +19,11 @@ test("compiled CLI help exits successfully from npm script entry", () => {
   });
 
   assert.equal(result.status, 0);
-  assert.match(result.stdout, /Usage: node dist\/src\/cli\.js <auth:x\|sync\|sync:github\|export:md>/);
+  assert.match(result.stdout, /Usage: node dist\/src\/cli\.js <auth:x\|sync:x\|sync:github\|export:md>/);
 });
 
-test("auth, sync, github sync, and export scripts point to the same compiled CLI entry", () => {
-  assert.equal(scriptEntry("auth:x"), scriptEntry("sync"));
+test("auth, x sync, github sync, and export scripts point to the same compiled CLI entry", () => {
+  assert.equal(scriptEntry("auth:x"), scriptEntry("sync:x"));
   assert.equal(scriptEntry("auth:x"), scriptEntry("sync:github"));
   assert.equal(scriptEntry("auth:x"), scriptEntry("export:md"));
 });

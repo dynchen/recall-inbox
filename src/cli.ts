@@ -16,7 +16,7 @@ async function authX(): Promise<void> {
   console.log(`Saved X token to ${path.join(config.dataDir, "x-token.json")}`);
 }
 
-async function sync(): Promise<void> {
+async function syncX(): Promise<void> {
   const config = loadConfig();
   const store = new JsonStore(config.dataDir);
   const result = await runSyncSources(store, [createXSyncSource(config, store)]);
@@ -62,7 +62,7 @@ async function exportMarkdown(): Promise<void> {
 }
 
 function printUsage(): void {
-  console.log("Usage: node dist/src/cli.js <auth:x|sync|sync:github|export:md>");
+  console.log("Usage: node dist/src/cli.js <auth:x|sync:x|sync:github|export:md>");
 }
 
 async function main(): Promise<void> {
@@ -78,8 +78,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (command === "sync") {
-    await sync();
+  if (command === "sync:x") {
+    await syncX();
     return;
   }
 
