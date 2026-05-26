@@ -1020,6 +1020,27 @@ function CheckIcon(props: ComponentProps<"svg">) {
   );
 }
 
+function ExternalLinkIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M6.5 4.5H4.25A1.75 1.75 0 0 0 2.5 6.25v5.5c0 .97.78 1.75 1.75 1.75h5.5c.97 0 1.75-.78 1.75-1.75V9.5" />
+      <path d="M9 2.5h4.5V7" />
+      <path d="m8.5 7.5 5-5" />
+    </svg>
+  );
+}
+
 function ItemCard({
   item,
   expanded,
@@ -1082,8 +1103,8 @@ function ItemCard({
                 </button>
               ))}
             </div>
-            <a className="open-link" href={item.url} target="_blank" rel="noreferrer">
-              Open
+            <a className="open-link" href={item.url} target="_blank" rel="noreferrer" aria-label="Open item">
+              <ExternalLinkIcon />
             </a>
           </div>
         </div>

@@ -174,11 +174,16 @@ test("review page keeps the feed compact and separates source-specific content",
   assert.doesNotMatch(app, /ignored/);
   assert.match(app, /className="github-details"/);
   assert.match(app, /className="open-link"/);
+  assert.match(app, /function ExternalLinkIcon/);
+  assert.match(app, /aria-label="Open item"/);
+  assert.doesNotMatch(app, />\s*Open\s*<\/a>/);
   assert.match(app, /className="review-summary"/);
   assert.match(app, /className="review-fields"/);
   assert.doesNotMatch(app, /className="item-actions"/);
   assert.doesNotMatch(app, /keepMounted/);
   assert.match(css, /\.date-list\s*{[^}]*overflow-y: auto;/);
+  assert.match(css, /\.open-link\s*{[\s\S]*width: 30px;/);
+  assert.match(css, /\.open-link svg\s*{[^}]*display: block;/);
   assert.match(css, /\.review-panel\[data-panel-open="false"\] \.review-form\s*{[^}]*display: none;/);
   assert.doesNotMatch(css, /\.item-card\.status-inbox\s*{[^}]*border-color:/);
   assert.match(css, /@starting-style\s*{[\s\S]*\.select-popup/);
