@@ -20,6 +20,7 @@ interface SavedItem {
   tags?: string[];
   note?: string;
   status?: SavedItemStatus;
+  metadata?: Record<string, unknown>;
 }
 
 interface DateCount {
@@ -84,6 +85,36 @@ interface GitHubDetails {
   repo: string;
   stars?: string;
   topics: string[];
+}
+
+interface XUrlEntity {
+  url?: string;
+  expanded_url?: string;
+  display_url?: string;
+}
+
+interface XMedia {
+  media_key?: string;
+  type?: string;
+  url?: string;
+  preview_image_url?: string;
+}
+
+interface XReferencedTweet {
+  type?: string;
+  id?: string;
+  text?: string;
+}
+
+interface XMetadata {
+  publicMetrics?: Record<string, number>;
+  entities?: {
+    urls?: XUrlEntity[];
+  };
+  media?: XMedia[];
+  referencedTweets?: XReferencedTweet[];
+  referencedTweetObjects?: XReferencedTweet[];
+  possiblySensitive?: boolean;
 }
 
 const statusOptions: SavedItemStatus[] = ["inbox", "keep", "action", "dismiss"];
@@ -216,6 +247,44 @@ function githubDetails(item: SavedItem): GitHubDetails | null {
     .join(" ");
 
   return { description, language, repo, stars, topics };
+}
+
+function xMetadata(item: SavedItem): XMetadata | null {
+  return item.source === "x" && item.metadata?.x && typeof item.metadata.x === "object"
+    ? item.metadata.x as XMetadata
+    : null;
+}
+
+function xSignalChips(item: SavedItem): string[] {
+  const metadata = xMetadata(item);
+  if (!metadata) return [];
+
+  const urls = metadata.entities?.urls ?? [];
+  const media = metadata.media ?? [];
+  const referencedTweets = metadata.referencedTweets ?? [];
+  const metrics = metadata.publicMetrics ?? {};
+  const chips: string[] = [];
+
+  if (urls.length) chips.push(`${urls.length} ${urls.length === 1 ? "link" : "links"}`);
+  if (media.length) {
+    const mediaTypes = [...new Set(media.map((item) => item.type).filter(Boolean))];
+    chips.push(mediaTypes.length ? mediaTypes.join(" / ") : `${media.length} media`);
+  }
+  if (referencedTweets.some((tweet) => tweet.type === "quoted")) chips.push("quote");
+  if (metadata.possiblySensitive) chips.push("sensitive");
+  if (typeof metrics.bookmark_count === "number") chips.push(`${metrics.bookmark_count} bookmarks`);
+  if (typeof metrics.like_count === "number") chips.push(`${metrics.like_count} likes`);
+
+  return chips;
+}
+
+function metricEntries(metrics?: Record<string, number>): Array<[string, number]> {
+  if (!metrics) return [];
+  return Object.entries(metrics).filter(([, value]) => typeof value === "number");
+}
+
+function sourceUrls(metadata: XMetadata): XUrlEntity[] {
+  return metadata.entities?.urls ?? [];
 }
 
 export function App() {
@@ -1087,6 +1156,7 @@ function ItemCard({
   const status = item.normalizedStatus;
   const details = item.details;
   const shouldClamp = item.shouldClamp;
+  const signalChips = xSignalChips(item);
 
   return (
     <article
@@ -1151,6 +1221,13 @@ function ItemCard({
           ) : (
             <p className={shouldClamp && !expanded && !details ? "item-text clamped" : "item-text"}>{item.text}</p>
           )}
+          {signalChips.length ? (
+            <div className="source-signal-list" aria-label="Source signals">
+              {signalChips.map((chip) => (
+                <span key={chip} className="source-signal-chip">{chip}</span>
+              ))}
+            </div>
+          ) : null}
         </div>
         {shouldClamp && !expanded && !details ? (
           <button type="button" className="text-toggle" onClick={onToggleExpanded} aria-label="Expand text">
@@ -1184,6 +1261,12 @@ function ReviewPanel({
 }) {
   const tags = item.tags || [];
   const hasNote = Boolean(item.note?.trim());
+  const metadata = xMetadata(item);
+  const urls = metadata ? sourceUrls(metadata) : [];
+  const metrics = metricEntries(metadata?.publicMetrics);
+  const referencedTweets = metadata?.referencedTweetObjects ?? [];
+  const media = metadata?.media ?? [];
+  const hasSourceDetails = Boolean(metadata && (urls.length || metrics.length || referencedTweets.length || media.length || metadata.possiblySensitive));
 
   function saveTagsOnBlur(value: string) {
     const nextTags = value
@@ -1245,6 +1328,56 @@ function ReviewPanel({
               {saveState}
             </div>
           </div>
+          {hasSourceDetails ? (
+            <details className="source-details">
+              <summary>Source details</summary>
+              <div className="source-details-grid">
+                {urls.length ? (
+                  <div>
+                    <span className="review-field-label">Links</span>
+                    <div className="source-detail-list">
+                      {urls.map((url, index) => (
+                        <a key={`${url.expanded_url ?? url.url ?? index}`} href={url.expanded_url ?? url.url} target="_blank" rel="noreferrer">
+                          {url.display_url ?? url.expanded_url ?? url.url}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {media.length ? (
+                  <div>
+                    <span className="review-field-label">Media</span>
+                    <div className="source-detail-list">
+                      {media.map((item, index) => (
+                        <span key={item.media_key ?? index}>{item.type ?? "media"}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {referencedTweets.length ? (
+                  <div>
+                    <span className="review-field-label">Referenced</span>
+                    <div className="source-detail-list">
+                      {referencedTweets.map((tweet, index) => (
+                        <span key={tweet.id ?? index}>{tweet.text ?? tweet.id}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {metrics.length ? (
+                  <div>
+                    <span className="review-field-label">Metrics</span>
+                    <div className="source-detail-list compact">
+                      {metrics.map(([key, value]) => (
+                        <span key={key}>{key.replace(/_/g, " ")}: {value}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {metadata?.possiblySensitive ? <span className="source-warning">Possibly sensitive</span> : null}
+              </div>
+            </details>
+          ) : null}
         </div>
       </Collapsible.Panel>
     </Collapsible.Root>

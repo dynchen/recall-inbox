@@ -214,6 +214,26 @@ test("review page normalizes long topics and review form controls", async () => 
   assert.match(css, /\.select-popup\s*{[\s\S]*animation: select-popup-in 180ms/);
 });
 
+test("review page surfaces X metadata without showing language", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+  const css = await readFile("src/view/client/src/styles.css", "utf8");
+
+  assert.match(app, /metadata\?: Record<string, unknown>/);
+  assert.match(app, /interface XMetadata/);
+  assert.match(app, /function xMetadata/);
+  assert.match(app, /function xSignalChips/);
+  assert.match(app, /className="source-signal-list"/);
+  assert.match(app, /className="source-details"/);
+  assert.match(app, /Source details/);
+  assert.match(app, /expanded_url/);
+  assert.match(app, /bookmark_count/);
+  assert.match(app, /referencedTweetObjects/);
+  assert.doesNotMatch(app, /xMetadata\(item\)\?\.lang/);
+  assert.match(css, /\.source-signal-list/);
+  assert.match(css, /\.source-signal-chip/);
+  assert.match(css, /\.source-details/);
+});
+
 test("review page keeps filters and review controls visually quiet", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
