@@ -13,6 +13,8 @@ test("readme presents the project for first-time open source visitors", async ()
   assert.match(readme, /## Who It Is For/);
   assert.match(readme, /## One-Minute Demo/);
   assert.match(readme, /## Deployment Options/);
+  assert.match(readme, /### Credential Guide/);
+  assert.match(readme, /Starring` user permission set to read/);
   assert.match(readme, /\[Roadmap\]\(ROADMAP\.md\)/);
   assert.match(readme, /sync -> review -> tag\/note -> export/);
   assert.match(readme, /\[Source Adapter Guide\]\(docs\/source-adapter\.md\)/);

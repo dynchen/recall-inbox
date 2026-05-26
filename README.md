@@ -61,6 +61,34 @@ Configure one or more sources.
 - X bookmarks require `X_CLIENT_ID` and `X_CLIENT_SECRET`.
 - GitHub stars require `GITHUB_TOKEN`.
 
+### Credential Guide
+
+For X bookmarks:
+
+1. Create an X Developer Project and App.
+2. Enable OAuth 2.0 user authentication for the App.
+3. Use the callback URL that matches your runtime exactly.
+4. Copy the App `Client ID` and `Client Secret` into `.env`, Wrangler secrets,
+   or Vercel environment variables.
+5. Run the one-time X authorization flow. Local mode uses `yarn auth:x`;
+   deployed mode uses `Admin` -> `Authorize X` in the review UI.
+
+Recall Inbox requests `tweet.read`, `users.read`, `bookmark.read`, and
+`offline.access`. `offline.access` lets the app refresh the X token after the
+one-time authorization, so scheduled syncs can continue without asking you to
+authorize again.
+
+For GitHub stars:
+
+1. Create a GitHub personal access token for the account whose stars you want
+   to sync.
+2. Prefer a fine-grained token with `Starring` user permission set to read.
+3. Store it as `GITHUB_TOKEN` in `.env`, Wrangler secrets, or Vercel
+   environment variables.
+
+The GitHub source only reads starred repositories through the authenticated
+user's starring endpoint. It does not need repository write permissions.
+
 X callback URLs depend on where you run authorization:
 
 - Local CLI: `http://127.0.0.1:17863/callback`
@@ -107,9 +135,9 @@ yarn sync:x
 yarn sync:github
 ```
 
-`sync` is X-only and requires `yarn auth:x` first. `sync:github` is
-GitHub-only and requires `GITHUB_TOKEN`. A fine-grained GitHub token with access
-to starred repositories is enough for personal use.
+`sync:x` is X-only and requires `yarn auth:x` first. `sync:github` is
+GitHub-only and requires `GITHUB_TOKEN`. A fine-grained GitHub token with
+read-only `Starring` user permission is enough for personal use.
 
 Review stored items locally:
 
