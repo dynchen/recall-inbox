@@ -82,6 +82,14 @@ textarea {
   width: 100%;
 }
 
+.desktop-search-field {
+  min-width: 0;
+}
+
+.mobile-search-disclosure {
+  display: none;
+}
+
 #adminSecret {
   background: var(--surface);
   border: 1px solid var(--border-soft);
@@ -813,7 +821,7 @@ textarea:focus,
   align-items: center;
   border: 1px solid transparent;
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--text-muted);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 12px;
@@ -824,7 +832,8 @@ textarea:focus,
 }
 
 .open-link:hover {
-  background: var(--accent-muted);
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .status-actions {
@@ -1192,7 +1201,7 @@ textarea {
 }
 
 .select-trigger {
-  align-items: flex-start;
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1252,7 +1261,7 @@ textarea {
 .select-value {
   min-width: 0;
   overflow: visible;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .select-icon {
@@ -1309,6 +1318,7 @@ textarea {
   grid-template-columns: 16px minmax(0, 1fr);
   min-height: 34px;
   padding: 7px 10px 7px 8px;
+  white-space: nowrap;
 }
 
 .select-item[data-highlighted] {
@@ -1325,7 +1335,7 @@ textarea {
 
 .select-item-text {
   overflow: visible;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .select-scroll-arrow {
@@ -1543,16 +1553,16 @@ textarea {
   }
 
   .item-primary-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .item-side-actions {
-    align-items: stretch;
-    flex-direction: column;
-    width: 100%;
+    display: contents;
   }
 
   .status-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
   }
 
@@ -1561,7 +1571,11 @@ textarea {
   }
 
   .open-link {
-    justify-content: center;
+    align-self: start;
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+    margin-top: 1px;
   }
 
   .review-step-list {
@@ -1583,6 +1597,61 @@ textarea {
   .toolbar,
   .review-form {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toolbar-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .desktop-search-field {
+    display: none;
+  }
+
+  .mobile-search-disclosure {
+    display: block;
+    min-width: 0;
+    position: relative;
+  }
+
+  .mobile-search-disclosure summary {
+    align-items: center;
+    border-right: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 620;
+    height: 40px;
+    list-style: none;
+    padding: 0 12px;
+    user-select: none;
+  }
+
+  .mobile-search-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-search-disclosure[open] summary {
+    color: var(--text);
+  }
+
+  .mobile-search-popover {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    box-shadow: var(--shadow-soft);
+    left: 0;
+    padding: 6px;
+    position: absolute;
+    top: calc(100% + 8px);
+    width: min(82vw, 320px);
+    z-index: 30;
+  }
+
+  #mobileSearch {
+    border-color: var(--border-soft);
+    height: 38px;
   }
 
   .workflow-filters {

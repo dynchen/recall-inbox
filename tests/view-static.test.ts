@@ -18,13 +18,22 @@ test("review page is built as a Vite React app with Base UI primitives", async (
 });
 
 test("review page keeps controls usable on narrow screens", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
+  assert.match(app, /className="desktop-search-field"/);
+  assert.match(app, /className="mobile-search-disclosure"/);
+  assert.match(app, /id="mobileSearch"/);
   assert.match(css, /@media \(max-width: 980px\)/);
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.match(css, /\.item-header\s*{[\s\S]*flex-wrap: wrap;/);
   assert.match(css, /\.item-text\s*{[\s\S]*overflow-wrap: anywhere;/);
   assert.match(css, /grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.desktop-search-field\s*{[^}]*display: none;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.mobile-search-disclosure\s*{[^}]*display: block;/);
+  assert.match(css, /\.select-item-text\s*{[^}]*white-space: nowrap;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.item-side-actions\s*{[^}]*display: contents;/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.open-link\s*{[^}]*grid-column: 2;/);
 });
 
 test("review page clamps short text with many lines", async () => {

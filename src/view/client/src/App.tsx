@@ -739,13 +739,27 @@ export function App() {
         </div>
         <div className="toolbar">
           <div className="toolbar-panel">
-            <Input
-              id="search"
-              type="search"
-              placeholder="Search text, author, tag"
-              value={query}
-              onValueChange={setQuery}
-            />
+            <div className="desktop-search-field">
+              <Input
+                id="search"
+                type="search"
+                placeholder="Search text, author, tag"
+                value={query}
+                onValueChange={setQuery}
+              />
+            </div>
+            <details className="mobile-search-disclosure">
+              <summary>Search</summary>
+              <div className="mobile-search-popover">
+                <Input
+                  id="mobileSearch"
+                  type="search"
+                  placeholder="Search text, author, tag"
+                  value={query}
+                  onValueChange={setQuery}
+                />
+              </div>
+            </details>
             <BaseSelect
               ariaLabel="Filter by date"
               className="mobile-date-filter"
