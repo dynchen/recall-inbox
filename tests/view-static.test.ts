@@ -208,7 +208,7 @@ test("review page keeps filters and review controls visually quiet", async () =>
   assert.match(app, /className="review-editor"/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*background: color-mix\(in srgb, var\(--surface\) 70%, transparent\);/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*border: 1px solid var\(--border-soft\);/);
-  assert.match(css, /\.toolbar\s*{[\s\S]*max-width: 520px;/);
+  assert.match(css, /\.toolbar\s*{[\s\S]*max-width: 580px;/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*grid-template-columns: minmax\(220px, 1fr\);/);
   assert.match(css, /#search\s*{[\s\S]*height: 36px;/);
   assert.match(css, /\.workflow-filters/);
@@ -230,7 +230,7 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
 
   assert.match(app, /className="topbar-title"/);
   assert.doesNotMatch(app, /className="toolbar-meta"/);
-  assert.match(app, /className="side-tools"/);
+  assert.doesNotMatch(app, /className="side-tools"/);
   assert.match(app, /<Dialog\.Trigger className="source-text-trigger">Sources<\/Dialog\.Trigger>/);
   assert.match(app, /className="workflow-board"/);
   assert.match(app, /aria-label="Review filters"/);
@@ -248,7 +248,7 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.match(css, /\.topbar-title/);
   assert.doesNotMatch(css, /\.toolbar-meta/);
   assert.doesNotMatch(css, /\.queue-actions/);
-  assert.match(css, /\.side-tools/);
+  assert.doesNotMatch(css, /\.side-tools/);
   assert.match(css, /\.source-text-trigger/);
   assert.match(css, /\.workflow-board/);
   assert.match(css, /\.queue-header/);

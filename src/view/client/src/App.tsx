@@ -751,6 +751,7 @@ export function App() {
               onValueChange={changeDate}
             />
           </div>
+          {sourceControls}
         </div>
       </header>
 
@@ -906,9 +907,6 @@ export function App() {
             )}
           </div>
         </section>
-        <aside className="side-tools">
-          {sourceControls}
-        </aside>
       </main>
     </>
   );

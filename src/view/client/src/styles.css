@@ -66,7 +66,7 @@ textarea {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  max-width: 520px;
+  max-width: 580px;
   width: 100%;
 }
 
@@ -321,7 +321,7 @@ textarea:focus,
   align-items: start;
   display: grid;
   gap: 20px;
-  grid-template-columns: 220px minmax(0, 820px) 88px;
+  grid-template-columns: 220px minmax(0, 820px);
   justify-content: center;
   padding: 26px 32px 48px;
 }
@@ -447,16 +447,6 @@ textarea:focus,
   border-color: color-mix(in srgb, var(--border-soft) 82%, transparent);
   font-size: 13px;
   min-height: 36px;
-}
-
-.side-tools {
-  align-self: start;
-  display: flex;
-  justify-content: flex-start;
-  min-width: 0;
-  padding-top: 6px;
-  position: sticky;
-  top: 118px;
 }
 
 .source-text-trigger {
@@ -1486,13 +1476,6 @@ textarea {
 
   .sidebar {
     display: none;
-  }
-
-  .side-tools {
-    justify-content: flex-end;
-    order: -1;
-    padding-top: 0;
-    position: static;
   }
 
   .review-panel {
