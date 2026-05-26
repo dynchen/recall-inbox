@@ -726,20 +726,6 @@ export function App() {
               value={selectedDate}
               onValueChange={changeDate}
             />
-            <BaseSelect
-              ariaLabel="Filter by source"
-              id="sourceFilter"
-              options={sourceOptions}
-              value={selectedSource}
-              onValueChange={setSelectedSource}
-            />
-            <BaseSelect
-              ariaLabel="Filter by status"
-              id="statusFilter"
-              options={[{ label: "All status", value: "all" }, ...statusSelectOptions]}
-              value={selectedStatus}
-              onValueChange={changeStatus}
-            />
           </div>
         </div>
       </header>
@@ -778,6 +764,22 @@ export function App() {
                 <strong>{activeQueueLabel}</strong>
               </div>
               <span className="queue-description">{activeQueueDescription}</span>
+            </div>
+            <div className="workflow-filters" aria-label="Review filters">
+              <BaseSelect
+                ariaLabel="Filter by source"
+                id="sourceFilter"
+                options={sourceOptions}
+                value={selectedSource}
+                onValueChange={setSelectedSource}
+              />
+              <BaseSelect
+                ariaLabel="Filter by status"
+                id="statusFilter"
+                options={[{ label: "All status", value: "all" }, ...statusSelectOptions]}
+                value={selectedStatus}
+                onValueChange={changeStatus}
+              />
             </div>
             <div className="review-mode-strip" data-active={dailyReviewActive ? "true" : "false"}>
               <div>

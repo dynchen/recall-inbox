@@ -191,10 +191,14 @@ test("review page keeps filters and review controls visually quiet", async () =>
   const css = await readFile("src/view/client/src/styles.css", "utf8");
 
   assert.match(app, /className="toolbar-panel"/);
+  assert.match(app, /className="workflow-filters"/);
   assert.match(app, /className="review-trigger-label"/);
   assert.match(app, /className="review-editor"/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*background: color-mix\(in srgb, var\(--surface\) 70%, transparent\);/);
   assert.match(css, /\.toolbar-panel\s*{[\s\S]*border: 1px solid var\(--border-soft\);/);
+  assert.match(css, /\.toolbar-panel\s*{[\s\S]*grid-template-columns: minmax\(260px, 1fr\);/);
+  assert.match(css, /\.workflow-filters/);
+  assert.match(css, /\.workflow-filters \.select-trigger/);
   assert.match(css, /\.toolbar \.select-trigger\s*{[\s\S]*background: transparent;/);
   assert.match(css, /\.review-panel\s*{[\s\S]*border-top: 1px solid color-mix\(in srgb, var\(--border-soft\) 68%, transparent\);/);
   assert.match(css, /\.review-trigger-label\s*{[\s\S]*border: 1px solid transparent;/);
@@ -215,6 +219,7 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.match(app, /className="side-tools"/);
   assert.match(app, /<Dialog\.Trigger className="source-text-trigger">Sources<\/Dialog\.Trigger>/);
   assert.match(app, /className="workflow-board"/);
+  assert.match(app, /aria-label="Review filters"/);
   assert.match(app, /className="queue-header"/);
   assert.match(app, /className="queue-description"/);
   assert.match(app, /className="item-primary-row"/);
