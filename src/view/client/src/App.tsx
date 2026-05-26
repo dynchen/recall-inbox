@@ -1041,6 +1041,26 @@ function ExternalLinkIcon(props: ComponentProps<"svg">) {
   );
 }
 
+function ExpandTextIcon(props: ComponentProps<"svg">) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4 6.25 8 10l4-3.75" />
+      <path d="M4 2.75 8 6.5l4-3.75" />
+    </svg>
+  );
+}
+
 function ItemCard({
   item,
   expanded,
@@ -1133,8 +1153,8 @@ function ItemCard({
           )}
         </div>
         {shouldClamp && !expanded && !details ? (
-          <button type="button" className="text-toggle" onClick={onToggleExpanded}>
-            Expand
+          <button type="button" className="text-toggle" onClick={onToggleExpanded} aria-label="Expand text">
+            <ExpandTextIcon />
           </button>
         ) : null}
       </div>

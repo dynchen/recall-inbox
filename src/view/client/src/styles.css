@@ -956,7 +956,30 @@ textarea:focus,
   overflow: hidden;
 }
 
-.text-toggle,
+.text-toggle {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  justify-self: center;
+  padding: 0;
+  width: 34px;
+}
+
+.text-toggle:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.text-toggle svg {
+  display: block;
+}
+
 .review-trigger {
   background: transparent;
   border: 0;

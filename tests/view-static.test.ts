@@ -45,7 +45,9 @@ test("review page clamps short text with many lines", async () => {
   assert.match(app, /const shouldClamp = item\.shouldClamp;/);
   assert.match(app, /shouldClamp && !expanded && !details/);
   assert.match(app, /shouldClamp && !expanded && !details \?/);
-  assert.match(app, /className="text-toggle"[\s\S]*Expand/);
+  assert.match(app, /function ExpandTextIcon/);
+  assert.match(app, /className="text-toggle"[\s\S]*aria-label="Expand text"/);
+  assert.doesNotMatch(app, />\s*Expand\s*<\/button>/);
   assert.doesNotMatch(app, /Collapse/);
 });
 
