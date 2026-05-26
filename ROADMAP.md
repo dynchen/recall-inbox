@@ -17,16 +17,20 @@ These are the highest-value improvements for early users and contributors.
 - Keep each adapter small and testable. Use the
   [Source Adapter Guide](docs/source-adapter.md) for field mapping, pagination,
   auth, and test expectations.
-- Make source readiness visible in the Admin dialog so users know what can sync
-  and what still needs authorization.
+- Keep source readiness and authorization status clear in the Sources dialog as
+  more adapters are added.
 
 ### Review Workflow
 
 - Basic queue presets now cover unreviewed, action, and source-specific review flows.
+- Daily Review, source/status filters, and source setup now live in the review
+  surface instead of the top navigation.
 - Continue refining keyboard shortcuts for common review actions.
 - Add batch actions for selected items.
 - Expand Daily Review from the latest inbox queue into a configurable review
   window for newly synced items.
+- Move from batched initial rendering to list virtualization when libraries grow
+  beyond a few thousand items.
 
 ### Action Exports
 
@@ -48,7 +52,8 @@ These are the highest-value improvements for early users and contributors.
 
 - Keep Cloudflare as the shortest hosted path.
 - Document Vercel + Postgres as a supported alternative.
-- Add clearer first-sync and backfill guidance for large existing libraries.
+- Keep first-sync and backfill guidance current as source APIs and page limits
+  change.
 - Consider one-click or guided setup scripts only when they reduce real setup
   friction without hiding important secrets.
 
