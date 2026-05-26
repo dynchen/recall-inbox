@@ -215,7 +215,8 @@ test("review page supports a faster review workflow", async () => {
   assert.match(app, /className=\{`status-action status-\$\{option\}/);
   assert.match(css, /\.item-card\.active-review-item/);
   assert.match(css, /\.status-actions/);
-  assert.match(css, /\.status-action/);
+  assert.match(css, /\.status-actions \.status-action/);
+  assert.doesNotMatch(css, /(^|\n)\.status-action\s*{/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.status-actions\s*{[^}]*width: 100%;/);
 });
 

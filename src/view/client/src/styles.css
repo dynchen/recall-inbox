@@ -725,7 +725,7 @@ textarea:focus,
   padding: 2px;
 }
 
-.status-action {
+.status-actions .status-action {
   background: transparent;
   border: 0;
   border-radius: 999px;
@@ -738,25 +738,25 @@ textarea:focus,
   padding: 5px 7px;
 }
 
-.status-action:hover,
-.status-action.active {
+.status-actions .status-action:hover,
+.status-actions .status-action.active {
   background: var(--surface);
   color: var(--text);
 }
 
-.status-action.status-action.active {
+.status-actions .status-action.status-action.active {
   color: var(--accent);
 }
 
-.status-action.status-keep.active {
+.status-actions .status-action.status-keep.active {
   color: var(--success);
 }
 
-.status-action.status-dismiss.active {
+.status-actions .status-action.status-dismiss.active {
   color: var(--text-muted);
 }
 
-.status-action.status-inbox.active {
+.status-actions .status-action.status-inbox.active {
   color: var(--warning);
 }
 
@@ -1299,7 +1299,7 @@ textarea {
     width: 100%;
   }
 
-  .status-action {
+  .status-actions .status-action {
     flex: 1 1 0;
   }
 
