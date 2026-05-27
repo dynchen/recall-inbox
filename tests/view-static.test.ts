@@ -463,6 +463,18 @@ test("review page exposes queue presets for focused filters", async () => {
   assert.doesNotMatch(roadmap, /Improve filters for unreviewed items, action items, and source-specific\s+queues\./);
 });
 
+test("review page exposes markdown export from the sources dialog", async () => {
+  const app = await readFile("src/view/client/src/App.tsx", "utf8");
+
+  assert.match(app, /const \[exportingMarkdown, setExportingMarkdown\]/);
+  assert.match(app, /const \[exportMessage, setExportMessage\]/);
+  assert.match(app, /async function exportMarkdown/);
+  assert.match(app, /fetch\("\/api\/export\/markdown"/);
+  assert.match(app, /downloadMarkdownFile/);
+  assert.match(app, /Export Markdown/);
+  assert.match(app, /className="admin-button export-button"/);
+});
+
 test("review page precomputes item view data for faster filtering", async () => {
   const app = await readFile("src/view/client/src/App.tsx", "utf8");
   const css = await readFile("src/view/client/src/styles.css", "utf8");

@@ -79,6 +79,11 @@ interface AdminStatus {
   sources: Record<SourceSync, SourceStatus>;
 }
 
+interface MarkdownExportFile {
+  filename: string;
+  content: string;
+}
+
 interface GitHubDetails {
   description: string;
   metadata: GitHubMetadata | null;
@@ -320,6 +325,15 @@ function sourceUrls(metadata: XMetadata): XUrlEntity[] {
   return metadata.entities?.urls ?? [];
 }
 
+function downloadMarkdownFile(file: MarkdownExportFile) {
+  const url = URL.createObjectURL(new Blob([file.content], { type: "text/markdown;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function App() {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [query, setQuery] = useState("");
@@ -334,6 +348,8 @@ export function App() {
   const [demoMode, setDemoMode] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [syncingAction, setSyncingAction] = useState("");
+  const [exportingMarkdown, setExportingMarkdown] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => new Set());
   const [openReviewItems, setOpenReviewItems] = useState<Set<string>>(() => new Set());
   const [savingItems, setSavingItems] = useState<Map<string, string>>(() => new Map());
@@ -714,6 +730,27 @@ export function App() {
     }
   }
 
+  async function exportMarkdown() {
+    if (!adminSecret && !demoMode) {
+      setSyncMessage("Enter access key first.");
+      return;
+    }
+    setExportingMarkdown(true);
+    setExportMessage("Preparing Markdown...");
+    try {
+      const response = await fetch("/api/export/markdown", { headers: authHeaders(adminSecret) });
+      const data = (await response.json()) as { files?: MarkdownExportFile[]; error?: string };
+      if (!response.ok) throw new Error(data.error || "Markdown export failed.");
+      const files = data.files || [];
+      for (const file of files) downloadMarkdownFile(file);
+      setExportMessage(files.length ? `Downloaded ${files.length} Markdown file${files.length === 1 ? "" : "s"}.` : "No items to export.");
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : "Markdown export failed.");
+    } finally {
+      setExportingMarkdown(false);
+    }
+  }
+
   async function saveItem(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
     if (!adminSecret) {
       setAdminOpen(true);
@@ -814,6 +851,14 @@ export function App() {
                 <div className="admin-actions">
                   <button
                     type="button"
+                    className="admin-button export-button"
+                    disabled={exportingMarkdown}
+                    onClick={exportMarkdown}
+                  >
+                    {exportingMarkdown ? "Exporting" : "Export Markdown"}
+                  </button>
+                  <button
+                    type="button"
                     className="admin-button"
                     disabled={!canSyncAnySource}
                     onClick={() => runManualSync("all", 2)}
@@ -861,6 +906,7 @@ export function App() {
                 </div>
               </>
             )}
+            {exportMessage ? <div className="sync-status">{exportMessage}</div> : null}
             {syncMessage ? <div className="sync-status">{syncMessage}</div> : null}
           </div>
         </Dialog.Popup>

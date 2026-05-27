@@ -1,4 +1,5 @@
 import { createGitHubSyncSource, createXSyncSource, runSyncSources } from "../jobs/sync.js";
+import { groupItemsByCreatedDay, renderDailyMarkdown } from "../markdown.js";
 import { readReviewItemsFromStore, updateReviewItemInStore } from "../review.js";
 import { requestXToken } from "../sources/x/token.js";
 import type { AppConfig, SavedItem } from "../types.js";
@@ -32,6 +33,11 @@ interface SourceAdminStatus {
 
 interface AdminStatus {
   sources: Record<"x" | "github", SourceAdminStatus>;
+}
+
+interface MarkdownExportFile {
+  filename: string;
+  content: string;
 }
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
@@ -159,6 +165,14 @@ async function validateSyncReadiness(
   return sourceStatus.syncEnabled
     ? undefined
     : jsonResponse({ error: sourceStatus.reason ?? `${source} is not ready to sync.`, sources: status.sources }, { status: 400 });
+}
+
+function renderMarkdownExportFiles(items: SavedItem[]): MarkdownExportFile[] {
+  const groups = groupItemsByCreatedDay(items);
+  return [...groups.keys()].sort().map((day) => ({
+    filename: `${day}.md`,
+    content: renderDailyMarkdown(day, groups.get(day) ?? [])
+  }));
 }
 
 async function handleXAuthStart(
@@ -292,6 +306,16 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
         const unauthorized = requireAdminSecret(request, options.adminSecret);
         if (unauthorized) return unauthorized;
         return jsonResponse(await readAdminStatus(options.config, options.createStore()));
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/export/markdown") {
+        if (options.demoItems) {
+          return jsonResponse({ files: renderMarkdownExportFiles(options.demoItems) });
+        }
+        const unauthorized = requireAdminSecret(request, options.adminSecret);
+        if (unauthorized) return unauthorized;
+        const items = await readReviewItemsFromStore(options.createStore());
+        return jsonResponse({ files: renderMarkdownExportFiles(items) });
       }
 
       const itemMatch = /^\/api\/items\/(.+)$/.exec(url.pathname);

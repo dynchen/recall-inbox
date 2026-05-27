@@ -3,7 +3,8 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { renderDailyMarkdown, writeDailyMarkdownFiles } from "../src/markdown.js";
+import { renderDailyMarkdown } from "../src/markdown.js";
+import { writeDailyMarkdownFiles } from "../src/markdownFiles.js";
 import type { SavedItem } from "../src/types.js";
 
 test("renders an empty daily markdown file", () => {

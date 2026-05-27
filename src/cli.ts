@@ -2,7 +2,8 @@
 import path from "node:path";
 import { loadConfig } from "./env.js";
 import { createGitHubSyncSource, createXSyncSource, runSyncSources } from "./jobs/sync.js";
-import { groupItemsByCreatedDay, todayLocalDate, writeDailyMarkdown, writeDailyMarkdownFiles } from "./markdown.js";
+import { groupItemsByCreatedDay, todayLocalDate } from "./markdown.js";
+import { writeDailyMarkdown, writeDailyMarkdownFiles } from "./markdownFiles.js";
 import { JsonStore } from "./store/jsonStore.js";
 import { authorizeX } from "./sources/x/oauth.js";
 import { summarizeItems } from "./summarizer.js";

@@ -124,6 +124,69 @@ test("runtime app handler protects real item reads and writes with admin secret"
   assert.equal(authorizedWriteResponse.status, 200);
 });
 
+test("runtime app handler exports stored items as daily markdown files", async () => {
+  const handler = createAppHandler({
+    createStore: () =>
+      new TestRuntimeStore({
+        items: [
+          {
+            id: "github:owner/repo",
+            source: "github",
+            sourceItemId: "owner/repo",
+            url: "https://github.com/owner/repo",
+            authorName: "owner/repo",
+            text: "Repository",
+            discoveredAt: "2026-05-26T00:00:00.000Z",
+            createdAt: "2026-05-26T00:00:00.000Z",
+            tags: ["github"],
+            status: "action",
+            note: ""
+          }
+        ]
+      }),
+    config: {
+      xRedirectUri: "https://app.example.com/api/auth/x/callback",
+      dataDir: ".data",
+      outputDir: "outputs/daily",
+      summaryModel: "model",
+      summaryBaseUrl: "https://summary.example.com"
+    },
+    adminSecret: "secret"
+  });
+
+  const lockedResponse = await handler(new Request("https://app.example.com/api/export/markdown"));
+  const response = await handler(new Request("https://app.example.com/api/export/markdown", {
+    headers: { Authorization: "Bearer secret" }
+  }));
+
+  assert.equal(lockedResponse.status, 401);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    files: [
+      {
+        filename: "2026-05-26.md",
+        content: [
+          "# Daily Saved Items - 2026-05-26",
+          "",
+          "## New Items",
+          "",
+          "### owner/repo",
+          "",
+          "- Source: github",
+          "- Link: https://github.com/owner/repo",
+          "- Created: 2026-05-26T00:00:00.000Z",
+          "- Discovered: 2026-05-26T00:00:00.000Z",
+          "",
+          "> Repository",
+          "",
+          "- Status: inbox",
+          ""
+        ].join("\n")
+      }
+    ]
+  });
+});
+
 test("runtime app handler serves non-persistent demo items", async () => {
   const handler = createAppHandler({
     createStore: () => new TestRuntimeStore(),

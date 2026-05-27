@@ -118,3 +118,12 @@ test("cloudflare setup scripts document repeatable deployment", async () => {
   assert.match(readme, /yarn cf:release/);
   assert.match(readme, /yarn install/);
 });
+
+test("worker markdown export does not bundle local filesystem helpers", async () => {
+  const markdown = await readFile("src/markdown.ts", "utf8");
+  const cli = await readFile("src/cli.ts", "utf8");
+
+  assert.doesNotMatch(markdown, /node:fs\/promises/);
+  assert.doesNotMatch(markdown, /node:path/);
+  assert.match(cli, /from "\.\/markdownFiles\.js"/);
+});
