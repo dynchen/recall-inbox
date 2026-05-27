@@ -197,6 +197,7 @@ textarea {
   position: fixed;
   top: 50%;
   transform: translate(-50%, -50%);
+  will-change: opacity, transform;
   width: 100%;
   z-index: 31;
 }
@@ -1747,13 +1748,13 @@ textarea {
 
   .admin-dialog {
     border-radius: 12px;
-    inset: auto 10px 10px;
-    max-height: min(76vh, 680px);
-    max-width: none;
+    left: 50%;
+    max-height: min(680px, calc(100vh - 32px));
+    max-width: calc(100vw - 20px);
     padding: 14px;
-    top: auto;
-    transform: none;
-    width: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100vw - 20px));
   }
 
   .admin-dialog-header {

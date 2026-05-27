@@ -635,7 +635,7 @@ export function App() {
 
   async function loadAdminStatus(options: { quiet?: boolean } = {}) {
     if (!adminSecret) {
-      setSyncMessage("Enter ADMIN_SECRET first.");
+      setSyncMessage("Enter access key first.");
       return;
     }
     if (!options.quiet) setSyncMessage("Checking sources...");
@@ -656,7 +656,7 @@ export function App() {
 
   async function startSourceAuth(action: SourceAction) {
     if (!adminSecret) {
-      setSyncMessage("Enter ADMIN_SECRET first.");
+      setSyncMessage("Enter access key first.");
       return;
     }
     if (!action.authPath) return;
@@ -685,7 +685,7 @@ export function App() {
 
   async function runManualSync(source: SyncSource, maxPages: number, fullScan = false) {
     if (!adminSecret) {
-      setSyncMessage("Enter ADMIN_SECRET first.");
+      setSyncMessage("Enter access key first.");
       return;
     }
     const action = `${source}:${maxPages}`;
@@ -715,7 +715,7 @@ export function App() {
   async function saveItem(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
     if (!adminSecret) {
       setAdminOpen(true);
-      setSyncMessage("Enter ADMIN_SECRET before editing items.");
+      setSyncMessage("Enter access key before editing items.");
       return;
     }
     const version = (saveVersions.current.get(id) || 0) + 1;
@@ -782,8 +782,8 @@ export function App() {
               <Dialog.Title className="admin-title">{adminStatus ? "Sources & sync" : "Unlock inbox"}</Dialog.Title>
               <Dialog.Description className="admin-description">
                 {adminStatus
-                  ? "Source credentials are ready to inspect and sync."
-                  : "Enter ADMIN_SECRET to load private saved items and manage sources."}
+                  ? "Connected sources are ready to inspect and sync."
+                  : "Enter your access key to load private saved items and manage sources."}
               </Dialog.Description>
             </div>
             <Dialog.Close className="admin-close">Close</Dialog.Close>
@@ -793,7 +793,7 @@ export function App() {
               <Input
                 id="adminSecret"
                 type="password"
-                placeholder="ADMIN_SECRET"
+                placeholder="Access key"
                 value={adminSecret}
                 onValueChange={saveAdminSecret}
               />
@@ -806,7 +806,7 @@ export function App() {
               </button>
             </div>
             {!adminStatus ? (
-              <p className="admin-lock-note">Real saved items are private. Nothing is loaded until the token is accepted.</p>
+              <p className="admin-lock-note">Real saved items are private. Nothing is loaded until access is confirmed.</p>
             ) : (
               <>
                 <div className="admin-actions">
@@ -874,7 +874,7 @@ export function App() {
           <p id="summary">
             <span>
               {loadError
-                ? accessLocked ? "Enter ADMIN_SECRET to unlock items." : "Failed to load items."
+                ? accessLocked ? "Enter your access key to unlock items." : "Failed to load items."
                 : loadingItems
                   ? "Loading items..."
                   : `${filteredItems.length} shown, ${items.length} stored`}
@@ -1065,7 +1065,7 @@ export function App() {
                 <strong>{accessLocked ? "Inbox locked" : items.length === 0 ? "Connect a source" : "No matching items"}</strong>
                 <p>
                   {accessLocked
-                    ? "Open Sources and enter ADMIN_SECRET to load and edit saved items."
+                    ? "Open Sources and enter your access key to load and edit saved items."
                     : items.length === 0
                     ? "Open Sources to add credentials, authorize services, and run the first sync."
                     : "Try another date, queue, source, or search term."}
