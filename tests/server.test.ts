@@ -67,6 +67,7 @@ test("updateReviewItem rejects invalid status", async () => {
 test("local review server exposes runtime API endpoints", async () => {
   const dataDir = await makeDataDir();
   const server = createReviewServer({
+    adminSecret: "secret",
     dataDir,
     staticDir: "dist/view",
     config: {
@@ -85,10 +86,13 @@ test("local review server exposes runtime API endpoints", async () => {
   const origin = `http://127.0.0.1:${(address as AddressInfo).port}`;
 
   try {
-    const itemsResponse = await fetch(`${origin}/api/items`);
-    const adminResponse = await fetch(`${origin}/api/admin/status`);
-    const syncResponse = await fetch(`${origin}/api/sync?source=github`, { method: "POST" });
+    const headers = { Authorization: "Bearer secret" };
+    const lockedItemsResponse = await fetch(`${origin}/api/items`);
+    const itemsResponse = await fetch(`${origin}/api/items`, { headers });
+    const adminResponse = await fetch(`${origin}/api/admin/status`, { headers });
+    const syncResponse = await fetch(`${origin}/api/sync?source=github`, { method: "POST", headers });
 
+    assert.equal(lockedItemsResponse.status, 401);
     assert.equal(itemsResponse.status, 200);
     assert.equal(adminResponse.status, 200);
     assert.equal(syncResponse.status, 400);

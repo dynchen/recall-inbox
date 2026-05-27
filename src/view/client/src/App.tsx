@@ -331,6 +331,7 @@ export function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSecret, setAdminSecret] = useState(() => sessionStorage.getItem("recall-inbox-admin-secret") || "");
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
   const [syncingAction, setSyncingAction] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => new Set());
@@ -338,6 +339,7 @@ export function App() {
   const [savingItems, setSavingItems] = useState<Map<string, string>>(() => new Map());
   const [focusedItemId, setFocusedItemId] = useState("");
   const [itemsAnimating, setItemsAnimating] = useState(false);
+  const [accessLocked, setAccessLocked] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadingItems, setLoadingItems] = useState(true);
   const [visibleItemLimit, setVisibleItemLimit] = useState(INITIAL_RENDER_LIMIT);
@@ -345,15 +347,24 @@ export function App() {
   const itemsAnimationTimer = useRef<number | undefined>(undefined);
   const saveVersions = useRef(new Map<string, number>());
 
-  async function loadItems() {
+  function authHeaders(secret = adminSecret): HeadersInit | undefined {
+    return secret ? { Authorization: `Bearer ${secret}` } : undefined;
+  }
+
+  async function loadItems(secret = adminSecret) {
     setLoadingItems(true);
     try {
-      const response = await fetch("/api/items");
-      if (!response.ok) throw new Error("Failed to load items.");
-      const data = (await response.json()) as { items?: SavedItem[] };
+      const response = await fetch("/api/items", { headers: authHeaders(secret) });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 500) setAccessLocked(true);
+        throw new Error("Failed to load items.");
+      }
+      const data = (await response.json()) as { demo?: boolean; items?: SavedItem[] };
       startItemsTransition(() => {
         setItems(data.items || []);
+        setDemoMode(Boolean(data.demo));
         setVisibleItemLimit(INITIAL_RENDER_LIMIT);
+        setAccessLocked(false);
         setLoadError(false);
       });
     } finally {
@@ -617,6 +628,8 @@ export function App() {
       sessionStorage.setItem("recall-inbox-admin-secret", value);
     } else {
       sessionStorage.removeItem("recall-inbox-admin-secret");
+      setItems([]);
+      setAccessLocked(true);
     }
   }
 
@@ -628,11 +641,12 @@ export function App() {
     if (!options.quiet) setSyncMessage("Checking sources...");
     try {
       const response = await fetch("/api/admin/status", {
-        headers: { Authorization: `Bearer ${adminSecret}` }
+        headers: authHeaders(adminSecret)
       });
       const data = (await response.json()) as AdminStatus | { error?: string };
       if (!response.ok) throw new Error("error" in data ? data.error : "Failed to check sources.");
       setAdminStatus(data as AdminStatus);
+      await loadItems(adminSecret);
       if (!options.quiet) setSyncMessage("Source status loaded.");
     } catch (error) {
       setAdminStatus(null);
@@ -649,7 +663,7 @@ export function App() {
     try {
       const response = await fetch(action.authPath, {
         method: "POST",
-        headers: { Authorization: `Bearer ${adminSecret}` }
+        headers: authHeaders(adminSecret)
       });
       const data = (await response.json()) as { authorizationUrl?: string; error?: string };
       if (!response.ok || !data.authorizationUrl) throw new Error(data.error || "Failed to start authorization.");
@@ -681,7 +695,7 @@ export function App() {
       const fullScanParam = fullScan ? "&fullScan=true" : "";
       const response = await fetch(`/api/sync?source=${source}&maxPages=${maxPages}${fullScanParam}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${adminSecret}` }
+        headers: authHeaders(adminSecret)
       });
       const data = (await response.json()) as SyncResult | { error?: string };
       if (!response.ok) throw new Error("error" in data ? data.error : "Sync failed.");
@@ -699,6 +713,11 @@ export function App() {
   }
 
   async function saveItem(id: string, patch: Partial<Pick<SavedItem, "status" | "tags" | "note">>) {
+    if (!adminSecret) {
+      setAdminOpen(true);
+      setSyncMessage("Enter ADMIN_SECRET before editing items.");
+      return;
+    }
     const version = (saveVersions.current.get(id) || 0) + 1;
     saveVersions.current.set(id, version);
     const previousItem = items.find((item) => item.id === id);
@@ -707,7 +726,10 @@ export function App() {
     try {
       const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(adminSecret)
+        },
         body: JSON.stringify(patch)
       });
       if (!response.ok) throw new Error("Failed to save item.");
@@ -757,72 +779,86 @@ export function App() {
         <Dialog.Popup className="admin-dialog">
           <div className="admin-dialog-header">
             <div>
-              <Dialog.Title className="admin-title">Sources & sync</Dialog.Title>
+              <Dialog.Title className="admin-title">{adminStatus ? "Sources & sync" : "Unlock inbox"}</Dialog.Title>
               <Dialog.Description className="admin-description">
-                Use ADMIN_SECRET to check source readiness, authorize accounts, and run manual syncs.
+                {adminStatus
+                  ? "Source credentials are ready to inspect and sync."
+                  : "Enter ADMIN_SECRET to load private saved items and manage sources."}
               </Dialog.Description>
             </div>
             <Dialog.Close className="admin-close">Close</Dialog.Close>
           </div>
           <div className="admin-dialog-body" aria-label="Admin sync controls">
-            <Input
-              id="adminSecret"
-              type="password"
-              placeholder="ADMIN_SECRET"
-              value={adminSecret}
-              onValueChange={saveAdminSecret}
-            />
-            <div className="admin-actions">
-              <button type="button" className="admin-button" onClick={() => loadAdminStatus()}>
-                Check readiness
-              </button>
-              <button
-                type="button"
-                className="admin-button"
-                disabled={!canSyncAnySource}
-                onClick={() => runManualSync("all", 2)}
-              >
-                {syncingAction === "all:2" ? "Syncing" : "Sync recent"}
-              </button>
+            <div className="admin-unlock">
+              <Input
+                id="adminSecret"
+                type="password"
+                placeholder="ADMIN_SECRET"
+                value={adminSecret}
+                onValueChange={saveAdminSecret}
+              />
               <button
                 type="button"
                 className="admin-button primary"
-                disabled={!canSyncAnySource}
-                onClick={() => runManualSync("all", 50, true)}
+                onClick={() => loadAdminStatus()}
               >
-                {syncingAction === "all:50" ? "Syncing" : "Backfill all"}
+                {adminStatus ? "Refresh" : "Unlock"}
               </button>
             </div>
-            <div className="source-action-list">
-              {sourceActions.map((action) => (
-                <div className="source-action" key={action.source}>
-                  <div>
-                    <strong>{action.label}</strong>
-                    <span>{action.description}</span>
-                    <span className={sourceStatus(action.source)?.syncEnabled ? "source-status ready" : "source-status"}>
-                      {sourceStatus(action.source)?.syncEnabled
-                        ? "Ready to sync"
-                        : sourceStatus(action.source)?.reason || "Check status before syncing."}
-                    </span>
-                  </div>
-                  <div className="source-action-buttons">
-                    {action.authPath ? (
-                      <button type="button" className="admin-button" onClick={() => startSourceAuth(action)}>
-                        Authorize {action.label}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="admin-button"
-                      disabled={!canSyncSource(action.source)}
-                      onClick={() => runManualSync(action.source, 2)}
-                    >
-                      {syncingAction === `${action.source}:2` ? "Syncing" : <>Sync {action.label}</>}
-                    </button>
-                  </div>
+            {!adminStatus ? (
+              <p className="admin-lock-note">Real saved items are private. Nothing is loaded until the token is accepted.</p>
+            ) : (
+              <>
+                <div className="admin-actions">
+                  <button
+                    type="button"
+                    className="admin-button"
+                    disabled={!canSyncAnySource}
+                    onClick={() => runManualSync("all", 2)}
+                  >
+                    {syncingAction === "all:2" ? "Syncing" : "Sync recent"}
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-button primary"
+                    disabled={!canSyncAnySource}
+                    onClick={() => runManualSync("all", 50, true)}
+                  >
+                    {syncingAction === "all:50" ? "Syncing" : "Backfill all"}
+                  </button>
                 </div>
-              ))}
-            </div>
+                <div className="source-action-list">
+                  {sourceActions.map((action) => (
+                    <div className="source-action" key={action.source}>
+                      <div>
+                        <strong>{action.label}</strong>
+                        <span>{action.description}</span>
+                        <span className={sourceStatus(action.source)?.syncEnabled ? "source-status ready" : "source-status"}>
+                          {sourceStatus(action.source)?.syncEnabled
+                            ? "Ready to sync"
+                            : sourceStatus(action.source)?.reason || "Check status before syncing."}
+                        </span>
+                      </div>
+                      <div className="source-action-buttons">
+                        {action.authPath ? (
+                          <button type="button" className="admin-button" onClick={() => startSourceAuth(action)}>
+                            Authorize {action.label}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="admin-button"
+                          disabled={!canSyncSource(action.source)}
+                          onClick={() => runManualSync(action.source, 2)}
+                        >
+                          {syncingAction === `${action.source}:2` ? "Syncing" : <>Sync {action.label}</>}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             {syncMessage ? <div className="sync-status">{syncMessage}</div> : null}
           </div>
         </Dialog.Popup>
@@ -834,11 +870,11 @@ export function App() {
     <>
       <header className="topbar">
         <div className="topbar-title">
-          <h1>Recall Inbox</h1>
+          <h1>{demoMode ? "Recall Inbox Demo" : "Recall Inbox"}</h1>
           <p id="summary">
             <span>
               {loadError
-                ? "Failed to load local items."
+                ? accessLocked ? "Enter ADMIN_SECRET to unlock items." : "Failed to load items."
                 : loadingItems
                   ? "Loading items..."
                   : `${filteredItems.length} shown, ${items.length} stored`}
@@ -1026,15 +1062,17 @@ export function App() {
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="empty-state">
-                <strong>{items.length === 0 ? "Connect a source" : "No matching items"}</strong>
+                <strong>{accessLocked ? "Inbox locked" : items.length === 0 ? "Connect a source" : "No matching items"}</strong>
                 <p>
-                  {items.length === 0
+                  {accessLocked
+                    ? "Open Sources and enter ADMIN_SECRET to load and edit saved items."
+                    : items.length === 0
                     ? "Open Sources to add credentials, authorize services, and run the first sync."
                     : "Try another date, queue, source, or search term."}
                 </p>
-                {items.length === 0 ? (
+                {accessLocked || items.length === 0 ? (
                   <button type="button" className="empty-action" onClick={() => setAdminOpen(true)}>
-                    Open Sources
+                    {accessLocked ? "Unlock" : "Open Sources"}
                   </button>
                 ) : null}
               </div>

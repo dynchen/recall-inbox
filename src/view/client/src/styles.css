@@ -100,7 +100,22 @@ textarea {
   border-radius: 6px;
   font-size: 13px;
   min-height: 38px;
+  min-width: 0;
   padding: 8px 10px;
+}
+
+.admin-unlock {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-lock-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: -2px 0 2px;
 }
 
 .admin-actions {
@@ -1747,6 +1762,10 @@ textarea {
 
   .admin-actions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-unlock {
     grid-template-columns: 1fr;
   }
 

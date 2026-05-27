@@ -58,7 +58,9 @@ test("runtime app handler serves review items from an injected store", async () 
     adminSecret: "secret"
   });
 
-  const response = await handler(new Request("https://app.example.com/api/items"));
+  const response = await handler(new Request("https://app.example.com/api/items", {
+    headers: { Authorization: "Bearer secret" }
+  }));
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -76,6 +78,50 @@ test("runtime app handler serves review items from an injected store", async () 
       }
     ]
   });
+});
+
+test("runtime app handler protects real item reads and writes with admin secret", async () => {
+  const handler = createAppHandler({
+    createStore: () =>
+      new TestRuntimeStore({
+        items: [
+          {
+            id: "github:owner/repo",
+            source: "github",
+            sourceItemId: "owner/repo",
+            url: "https://github.com/owner/repo",
+            text: "Repository",
+            discoveredAt: "2026-05-26T00:00:00.000Z",
+            tags: ["github"],
+            status: "inbox",
+            note: ""
+          }
+        ]
+      }),
+    config: {
+      xRedirectUri: "https://app.example.com/api/auth/x/callback",
+      dataDir: ".data",
+      outputDir: "outputs/daily",
+      summaryModel: "model",
+      summaryBaseUrl: "https://summary.example.com"
+    },
+    adminSecret: "secret"
+  });
+
+  const readResponse = await handler(new Request("https://app.example.com/api/items"));
+  const writeResponse = await handler(new Request("https://app.example.com/api/items/github%3Aowner%2Frepo", {
+    method: "PATCH",
+    body: JSON.stringify({ status: "keep" })
+  }));
+  const authorizedWriteResponse = await handler(new Request("https://app.example.com/api/items/github%3Aowner%2Frepo", {
+    method: "PATCH",
+    headers: { Authorization: "Bearer secret" },
+    body: JSON.stringify({ status: "keep" })
+  }));
+
+  assert.equal(readResponse.status, 401);
+  assert.equal(writeResponse.status, 401);
+  assert.equal(authorizedWriteResponse.status, 200);
 });
 
 test("runtime app handler serves non-persistent demo items", async () => {
@@ -124,6 +170,7 @@ test("runtime app handler serves non-persistent demo items", async () => {
     }
   });
   assert.deepEqual(await listResponse.json(), {
+    demo: true,
     items: [
       {
         id: "github:owner/repo",

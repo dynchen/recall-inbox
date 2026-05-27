@@ -102,8 +102,10 @@ Copy the environment template:
 cp .env.example .env
 ```
 
-Fill in the source credentials you need. For local X authorization, use the
-local callback URL in both the X Developer Portal and `.env`:
+Set `ADMIN_SECRET`, then fill in the source credentials you need. The review UI
+uses `ADMIN_SECRET` to load and edit real saved items. For local X
+authorization, use the local callback URL in both the X Developer Portal and
+`.env`:
 
 ```text
 http://127.0.0.1:17863/callback
@@ -139,6 +141,8 @@ yarn view
 ```
 
 Open `http://127.0.0.1:17864`.
+Enter `ADMIN_SECRET` in `Sources` to unlock stored items and run protected
+source actions.
 
 Regenerate Markdown from already stored local data without calling remote APIs:
 
@@ -201,10 +205,10 @@ yarn wrangler secret put X_CLIENT_SECRET
 yarn wrangler secret put GITHUB_TOKEN
 ```
 
-`ADMIN_SECRET` protects operator-only endpoints such as manual sync and one-time
-X authorization. `X_CLIENT_ID` and `X_CLIENT_SECRET` are only needed for X
-bookmarks. `GITHUB_TOKEN` is only needed for GitHub stars. Scheduled cron runs
-do not need an authorization header.
+`ADMIN_SECRET` protects real saved-item reads and writes, manual sync, and
+one-time X authorization. `X_CLIENT_ID` and `X_CLIENT_SECRET` are only needed
+for X bookmarks. `GITHUB_TOKEN` is only needed for GitHub stars. Scheduled cron
+runs do not need an authorization header.
 
 Build, migrate, and deploy:
 

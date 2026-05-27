@@ -88,6 +88,16 @@ function hasValidSecret(request: Request, url: URL, secret: string | undefined):
   );
 }
 
+function requireAdminSecret(request: Request, secret: string | undefined): Response | undefined {
+  if (!secret) {
+    return jsonResponse({ error: "ADMIN_SECRET is required." }, { status: 500 });
+  }
+  if (request.headers.get("Authorization") !== `Bearer ${secret}`) {
+    return jsonResponse({ error: "Unauthorized." }, { status: 401 });
+  }
+  return undefined;
+}
+
 function parsePositiveNumber(value: string | null | undefined): number | undefined {
   if (!value) return undefined;
   const parsed = Number(value);
@@ -263,8 +273,10 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
 
       if (request.method === "GET" && url.pathname === "/api/items") {
         if (options.demoItems) {
-          return jsonResponse({ items: options.demoItems });
+          return jsonResponse({ demo: true, items: options.demoItems });
         }
+        const unauthorized = requireAdminSecret(request, options.adminSecret);
+        if (unauthorized) return unauthorized;
         return jsonResponse({ items: await readReviewItemsFromStore(options.createStore()) });
       }
 
@@ -277,9 +289,8 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
             }
           });
         }
-        if (options.adminSecret && request.headers.get("Authorization") !== `Bearer ${options.adminSecret}`) {
-          return jsonResponse({ error: "Unauthorized." }, { status: 401 });
-        }
+        const unauthorized = requireAdminSecret(request, options.adminSecret);
+        if (unauthorized) return unauthorized;
         return jsonResponse(await readAdminStatus(options.config, options.createStore()));
       }
 
@@ -292,6 +303,8 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
             ? jsonResponse({ item: { ...item, ...(await readJsonBody(request) as Partial<SavedItem>) } })
             : jsonResponse({ error: "Item not found." }, { status: 404 });
         }
+        const unauthorized = requireAdminSecret(request, options.adminSecret);
+        if (unauthorized) return unauthorized;
         const item = await updateReviewItemInStore(
           options.createStore(),
           decodeURIComponent(itemMatch[1]),
@@ -306,9 +319,8 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
         if (options.demoItems) {
           return jsonResponse({ error: "Demo mode does not sync sources." }, { status: 400 });
         }
-        if (options.adminSecret && request.headers.get("Authorization") !== `Bearer ${options.adminSecret}`) {
-          return jsonResponse({ error: "Unauthorized." }, { status: 401 });
-        }
+        const unauthorized = requireAdminSecret(request, options.adminSecret);
+        if (unauthorized) return unauthorized;
         const syncOptions = syncOptionsFromUrl(url);
         if (syncOptions instanceof Response) return syncOptions;
         const store = options.createStore();
