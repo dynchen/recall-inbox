@@ -1,7 +1,7 @@
 import { createGitHubSyncSource, createXSyncSource, runSyncSources } from "../jobs/sync.js";
 import { readReviewItemsFromStore, updateReviewItemInStore } from "../review.js";
 import { requestXToken } from "../sources/x/token.js";
-import type { AppConfig } from "../types.js";
+import type { AppConfig, SavedItem } from "../types.js";
 import type { RuntimeStore } from "./store.js";
 
 const X_AUTH_URL = "https://x.com/i/oauth2/authorize";
@@ -19,6 +19,7 @@ export interface RuntimeAppOptions {
   createStore(): RuntimeStore;
   config: AppConfig;
   adminSecret?: string;
+  demoItems?: SavedItem[];
   syncMaxPagesPerSource?: number;
 }
 
@@ -251,31 +252,48 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
   return async (request) => {
     try {
       const url = new URL(request.url);
-      const store = options.createStore();
 
       if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/auth/x/start") {
-        return handleXAuthStart(request, url, options, store);
+        return handleXAuthStart(request, url, options, options.createStore());
       }
 
       if (request.method === "GET" && url.pathname === "/api/auth/x/callback") {
-        return handleXAuthCallback(url, options, store);
+        return handleXAuthCallback(url, options, options.createStore());
       }
 
       if (request.method === "GET" && url.pathname === "/api/items") {
-        return jsonResponse({ items: await readReviewItemsFromStore(store) });
+        if (options.demoItems) {
+          return jsonResponse({ items: options.demoItems });
+        }
+        return jsonResponse({ items: await readReviewItemsFromStore(options.createStore()) });
       }
 
       if (request.method === "GET" && url.pathname === "/api/admin/status") {
+        if (options.demoItems) {
+          return jsonResponse({
+            sources: {
+              x: { configured: false, authorized: false, syncEnabled: false, reason: "Demo mode does not sync sources." },
+              github: { configured: false, authorized: false, syncEnabled: false, reason: "Demo mode does not sync sources." }
+            }
+          });
+        }
         if (options.adminSecret && request.headers.get("Authorization") !== `Bearer ${options.adminSecret}`) {
           return jsonResponse({ error: "Unauthorized." }, { status: 401 });
         }
-        return jsonResponse(await readAdminStatus(options.config, store));
+        return jsonResponse(await readAdminStatus(options.config, options.createStore()));
       }
 
       const itemMatch = /^\/api\/items\/(.+)$/.exec(url.pathname);
       if (request.method === "PATCH" && itemMatch) {
+        if (options.demoItems) {
+          const id = decodeURIComponent(itemMatch[1]);
+          const item = options.demoItems.find((demoItem) => demoItem.id === id);
+          return item
+            ? jsonResponse({ item: { ...item, ...(await readJsonBody(request) as Partial<SavedItem>) } })
+            : jsonResponse({ error: "Item not found." }, { status: 404 });
+        }
         const item = await updateReviewItemInStore(
-          store,
+          options.createStore(),
           decodeURIComponent(itemMatch[1]),
           await readJsonBody(request)
         );
@@ -285,11 +303,15 @@ export function createAppHandler(options: RuntimeAppOptions): (request: Request)
       }
 
       if (request.method === "POST" && url.pathname === "/api/sync") {
+        if (options.demoItems) {
+          return jsonResponse({ error: "Demo mode does not sync sources." }, { status: 400 });
+        }
         if (options.adminSecret && request.headers.get("Authorization") !== `Bearer ${options.adminSecret}`) {
           return jsonResponse({ error: "Unauthorized." }, { status: 401 });
         }
         const syncOptions = syncOptionsFromUrl(url);
         if (syncOptions instanceof Response) return syncOptions;
+        const store = options.createStore();
         const notReady = await validateSyncReadiness(options.config, store, syncOptions.source ?? "all");
         if (notReady) return notReady;
         return jsonResponse(

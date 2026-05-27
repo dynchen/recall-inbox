@@ -1,20 +1,6 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import type { SavedItem } from "./types.js";
 
-const statePath = path.join(process.cwd(), ".data", "items.json");
-const force = process.argv.includes("--force");
-
-async function existingStateHasItems() {
-  try {
-    const state = JSON.parse(await readFile(statePath, "utf8"));
-    return Array.isArray(state.items) && state.items.length > 0;
-  } catch (error) {
-    if (error?.code === "ENOENT") return false;
-    throw error;
-  }
-}
-
-const items = [
+export const demoItems: SavedItem[] = [
   {
     id: "github:base-ui/base-ui",
     source: "github",
@@ -72,12 +58,3 @@ const items = [
     note: ""
   }
 ];
-
-if (!force && await existingStateHasItems()) {
-  console.log(".data/items.json already has items. Re-run with --force to replace it with demo data.");
-  process.exit(0);
-}
-
-await mkdir(path.dirname(statePath), { recursive: true });
-await writeFile(statePath, `${JSON.stringify({ items }, null, 2)}\n`, "utf8");
-console.log(`Seeded ${items.length} demo items into ${statePath}`);

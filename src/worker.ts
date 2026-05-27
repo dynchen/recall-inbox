@@ -1,9 +1,10 @@
 import { createAppHandler, runRuntimeSync, type RuntimeSyncOptions } from "./runtime/app.js";
+import { demoItems } from "./demoItems.js";
 import { D1Store, type D1Database } from "./store/d1Store.js";
 import type { AppConfig } from "./types.js";
 
 interface Env {
-  DB: D1Database;
+  DB?: D1Database;
   ASSETS?: { fetch(request: Request): Promise<Response> };
   ADMIN_SECRET?: string;
   CRON_SECRET?: string;
@@ -15,6 +16,7 @@ interface Env {
   SUMMARY_MODEL?: string;
   SUMMARY_BASE_URL?: string;
   SYNC_MAX_PAGES_PER_SOURCE?: string;
+  DEMO_MODE?: string;
 }
 
 function configFromEnv(env: Env, requestUrl?: URL): AppConfig {
@@ -42,6 +44,10 @@ function adminSecret(env: Env): string | undefined {
 }
 
 export async function runCloudflareSync(env: Env, options: RuntimeSyncOptions = {}) {
+  if (env.DEMO_MODE === "true") {
+    return { fetched: 0, newItems: 0, stored: demoItems.length, sources: {} };
+  }
+  if (!env.DB) throw new Error("DB binding is required.");
   return runRuntimeSync(
     new D1Store(env.DB),
     configFromEnv(env),
@@ -55,9 +61,13 @@ export default {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
       return createAppHandler({
-        createStore: () => new D1Store(env.DB),
+        createStore: () => {
+          if (!env.DB) throw new Error("DB binding is required.");
+          return new D1Store(env.DB);
+        },
         config: configFromEnv(env, url),
         adminSecret: adminSecret(env),
+        demoItems: env.DEMO_MODE === "true" ? demoItems : undefined,
         syncMaxPagesPerSource: parsePositiveNumber(env.SYNC_MAX_PAGES_PER_SOURCE)
       })(request);
     }

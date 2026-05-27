@@ -20,16 +20,9 @@ and Markdown export, while keeping the data in infrastructure you control.
 
 ## One-Minute Demo
 
-Try the review UI without creating API tokens:
+Try the hosted demo without creating API tokens:
 
-```bash
-yarn install
-yarn demo
-yarn view
-```
-
-Open `http://127.0.0.1:17864`. `yarn demo` only seeds sample data when the local
-store is empty. Use `yarn demo -- --force` to replace existing local sample data.
+https://recall-inbox-demo.kapler.workers.dev
 
 ## Features
 
@@ -185,8 +178,7 @@ yarn cf:setup
 ```
 
 The script copies `wrangler.example.toml` to `wrangler.toml` when needed,
-creates the `inbox` and `inbox-preview` D1 databases, and writes their ids back
-to `wrangler.toml`.
+creates the `inbox` D1 database, and writes its id back to `wrangler.toml`.
 
 If you are starting over from an existing `wrangler.toml`, run:
 
@@ -220,14 +212,24 @@ Build, migrate, and deploy:
 yarn cf:release
 ```
 
-Manual setup is also possible:
+Manual setup is also possible with Wrangler:
 
 ```bash
 cp wrangler.example.toml wrangler.toml
 yarn wrangler d1 create inbox
-yarn cf:migrate
-yarn cf:deploy
+yarn wrangler d1 migrations apply DB --remote
+yarn build
+yarn wrangler deploy
 ```
+
+To deploy a public demo Worker without D1 or source credentials:
+
+```bash
+yarn cf:deploy-demo
+```
+
+The demo serves built-in sample items from `DEMO_MODE` and does not persist
+visitor changes.
 
 If you use X on Cloudflare, set the X Developer Portal callback URL to:
 
@@ -298,7 +300,7 @@ D1 so the app logic can run against either store.
 The Vercel build command is:
 
 ```bash
-yarn vercel:build
+yarn build
 ```
 
 The included `vercel.json` publishes `dist/view` and schedules daily sync via:

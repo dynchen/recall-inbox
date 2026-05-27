@@ -1,0 +1,12 @@
+workers_dev = true
+preview_urls = true
+name = "recall-inbox-demo"
+main = "dist/src/worker.js"
+compatibility_date = "2026-05-25"
+
+[assets]
+directory = "./dist/view"
+binding = "ASSETS"
+
+[vars]
+DEMO_MODE = "true"

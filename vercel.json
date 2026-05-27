@@ -1,5 +1,5 @@
 {
-  "buildCommand": "yarn vercel:build",
+  "buildCommand": "yarn build",
   "outputDirectory": "dist/view",
   "crons": [
     {

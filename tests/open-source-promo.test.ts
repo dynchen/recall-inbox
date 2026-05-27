@@ -1,8 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdtemp, readFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("readme presents the project for first-time open source visitors", async () => {
@@ -12,6 +9,7 @@ test("readme presents the project for first-time open source visitors", async ()
   assert.match(readme, /!\[Recall Inbox screenshot\]\(docs\/assets\/recall-inbox-screenshot\.png\)/);
   assert.match(readme, /## Who It Is For/);
   assert.match(readme, /## One-Minute Demo/);
+  assert.match(readme, /https:\/\/recall-inbox-demo\.kapler\.workers\.dev/);
   assert.match(readme, /## Deployment Options/);
   assert.match(readme, /### Credential Guide/);
   assert.match(readme, /Starring` user permission set to read/);
@@ -36,18 +34,11 @@ test("roadmap emphasizes the most valuable near-term open source work", async ()
   assert.match(roadmap, /## Non-Goals/);
 });
 
-test("demo script seeds local sample data for the review UI", async () => {
+test("package scripts do not include a local fake-data demo", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
     scripts: Record<string, string>;
   };
-  assert.equal(packageJson.scripts.demo, "node scripts/seed-demo.mjs");
-  await access("scripts/seed-demo.mjs");
 
-  const cwd = await mkdtemp(path.join(tmpdir(), "recall-inbox-demo-"));
-  const scriptPath = path.resolve("scripts/seed-demo.mjs");
-  const result = spawnSync(process.execPath, [scriptPath], { cwd, encoding: "utf8" });
-
-  assert.equal(result.status, 0, result.stderr);
-  const state = JSON.parse(await readFile(path.join(cwd, ".data/items.json"), "utf8")) as { items: unknown[] };
-  assert.equal(state.items.length, 4);
+  assert.equal(packageJson.scripts.demo, undefined);
+  await assert.rejects(() => access("scripts/seed-demo.mjs"));
 });

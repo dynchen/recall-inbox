@@ -14,8 +14,10 @@ test("vercel deployment exposes api adapters and cron configuration", async () =
   const vercelRuntime = await readFile("src/runtime/vercel.ts", "utf8");
   const readme = await readFile("README.md", "utf8");
 
-  assert.equal(packageJson.scripts["vercel:build"], "tsc -p tsconfig.json && vite build");
+  assert.equal(packageJson.scripts.build, "tsc -p tsconfig.json && vite build");
+  assert.equal(packageJson.scripts["vercel:build"], undefined);
   assert.match(packageJson.dependencies.postgres, /^\d/);
+  assert.match(vercelConfig, /"buildCommand": "yarn build"/);
   assert.match(vercelConfig, /"path": "\/api\/cron\/sync"/);
   assert.match(apiSync, /handleVercelNodeRequest/);
   assert.match(apiItems, /handleVercelNodeRequest/);

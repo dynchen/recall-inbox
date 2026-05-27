@@ -18,4 +18,3 @@ crons = ["15 18 * * *"]
 binding = "DB"
 database_name = "inbox"
 database_id = "<your-d1-database-id>"
-preview_database_id = "<your-preview-d1-database-id>"

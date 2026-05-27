@@ -77,3 +77,65 @@ test("runtime app handler serves review items from an injected store", async () 
     ]
   });
 });
+
+test("runtime app handler serves non-persistent demo items", async () => {
+  const handler = createAppHandler({
+    createStore: () => new TestRuntimeStore(),
+    config: {
+      xRedirectUri: "https://app.example.com/api/auth/x/callback",
+      dataDir: ".data",
+      outputDir: "outputs/daily",
+      summaryModel: "model",
+      summaryBaseUrl: "https://summary.example.com"
+    },
+    demoItems: [
+      {
+        id: "github:owner/repo",
+        source: "github",
+        sourceItemId: "owner/repo",
+        url: "https://github.com/owner/repo",
+        text: "Repository",
+        discoveredAt: "2026-05-26T00:00:00.000Z",
+        tags: ["github"],
+        status: "inbox",
+        note: ""
+      }
+    ]
+  });
+
+  const patchResponse = await handler(new Request("https://app.example.com/api/items/github%3Aowner%2Frepo", {
+    method: "PATCH",
+    body: JSON.stringify({ status: "keep", note: "Read later" })
+  }));
+  const listResponse = await handler(new Request("https://app.example.com/api/items"));
+
+  assert.equal(patchResponse.status, 200);
+  assert.deepEqual(await patchResponse.json(), {
+    item: {
+      id: "github:owner/repo",
+      source: "github",
+      sourceItemId: "owner/repo",
+      url: "https://github.com/owner/repo",
+      text: "Repository",
+      discoveredAt: "2026-05-26T00:00:00.000Z",
+      tags: ["github"],
+      status: "keep",
+      note: "Read later"
+    }
+  });
+  assert.deepEqual(await listResponse.json(), {
+    items: [
+      {
+        id: "github:owner/repo",
+        source: "github",
+        sourceItemId: "owner/repo",
+        url: "https://github.com/owner/repo",
+        text: "Repository",
+        discoveredAt: "2026-05-26T00:00:00.000Z",
+        tags: ["github"],
+        status: "inbox",
+        note: ""
+      }
+    ]
+  });
+});

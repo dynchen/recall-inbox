@@ -6,7 +6,6 @@ const WRANGLER_CONFIG = "wrangler.toml";
 const WRANGLER_TEMPLATE = "wrangler.example.toml";
 const RUN_WRANGLER = process.execPath;
 const DATABASE_NAME = "inbox";
-const PREVIEW_DATABASE_NAME = "inbox-preview";
 const force = process.argv.includes("--force");
 
 function run(command, args) {
@@ -52,8 +51,7 @@ if (force || !existsSync(WRANGLER_CONFIG)) {
 
 const initialWrangler = readFileSync(WRANGLER_CONFIG, "utf8");
 if (
-  !initialWrangler.includes('database_id = "<your-d1-database-id>"') ||
-  !initialWrangler.includes('preview_database_id = "<your-preview-d1-database-id>"')
+  !initialWrangler.includes('database_id = "<your-d1-database-id>"')
 ) {
   throw new Error(
     `${WRANGLER_CONFIG} already has D1 ids. Remove it or run npm run cf:setup -- --force.`
@@ -61,22 +59,16 @@ if (
 }
 
 const databaseId = createDatabase(DATABASE_NAME);
-const previewDatabaseId = createDatabase(PREVIEW_DATABASE_NAME);
 
 let wrangler = initialWrangler;
 wrangler = replaceRequired(wrangler, 'database_id = "<your-d1-database-id>"', `database_id = "${databaseId}"`);
-wrangler = replaceRequired(
-  wrangler,
-  'preview_database_id = "<your-preview-d1-database-id>"',
-  `preview_database_id = "${previewDatabaseId}"`
-);
 writeFileSync(WRANGLER_CONFIG, wrangler);
 
 console.log(`Updated ${WRANGLER_CONFIG}.`);
 console.log("");
 console.log("Next steps:");
-console.log("  npx wrangler secret put ADMIN_SECRET");
-console.log("  npx wrangler secret put GITHUB_TOKEN      # optional");
-console.log("  npx wrangler secret put X_CLIENT_ID       # optional");
-console.log("  npx wrangler secret put X_CLIENT_SECRET   # optional");
-console.log("  npm run cf:release");
+console.log("  yarn wrangler secret put ADMIN_SECRET");
+console.log("  yarn wrangler secret put GITHUB_TOKEN      # optional");
+console.log("  yarn wrangler secret put X_CLIENT_ID       # optional");
+console.log("  yarn wrangler secret put X_CLIENT_SECRET   # optional");
+console.log("  yarn cf:release");

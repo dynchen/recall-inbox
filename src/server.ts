@@ -5,11 +5,15 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./env.js";
+import { createAppHandler } from "./runtime/app.js";
 import { readReviewItemsFromStore, updateReviewItemInStore } from "./review.js";
 import { JsonStore } from "./store/jsonStore.js";
+import type { AppConfig } from "./types.js";
 import type { SavedItem } from "./types.js";
 
 interface ServerOptions {
+  adminSecret?: string;
+  config?: AppConfig;
   dataDir: string;
   staticDir: string;
 }
@@ -17,14 +21,6 @@ interface ServerOptions {
 function sendJson(response: http.ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(body));
-}
-
-async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {};
 }
 
 export async function readReviewItems(dataDir: string): Promise<SavedItem[]> {
@@ -77,32 +73,20 @@ async function serveStatic(
 }
 
 export function createReviewServer(options: ServerOptions): http.Server {
+  const config = options.config ?? loadConfig();
+  const appHandler = createAppHandler({
+    createStore: () => new JsonStore(options.dataDir),
+    config,
+    adminSecret: options.adminSecret
+  });
+
   return http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
-      if (request.method === "GET" && url.pathname === "/api/items") {
-        sendJson(response, 200, { items: await readReviewItems(options.dataDir) });
-        return;
-      }
-
-      const itemMatch = /^\/api\/items\/(.+)$/.exec(url.pathname);
-      if (request.method === "PATCH" && itemMatch) {
-        const item = await updateReviewItem(
-          options.dataDir,
-          decodeURIComponent(itemMatch[1]),
-          await readJsonBody(request)
-        );
-        if (!item) {
-          sendJson(response, 404, { error: "Item not found." });
-          return;
-        }
-        sendJson(response, 200, { item });
-        return;
-      }
-
       if (url.pathname.startsWith("/api/")) {
-        sendJson(response, 404, { error: "Not found." });
+        const runtimeResponse = await appHandler(await toWebRequest(request, url));
+        await sendWebResponse(response, runtimeResponse);
         return;
       }
 
@@ -114,6 +98,30 @@ export function createReviewServer(options: ServerOptions): http.Server {
   });
 }
 
+async function toWebRequest(request: http.IncomingMessage, url: URL): Promise<Request> {
+  const body = request.method === "GET" || request.method === "HEAD"
+    ? undefined
+    : await readRawBody(request);
+  return new Request(url.toString(), {
+    body,
+    headers: request.headers as Record<string, string>,
+    method: request.method
+  });
+}
+
+async function readRawBody(request: http.IncomingMessage): Promise<Buffer | undefined> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return chunks.length ? Buffer.concat(chunks) : undefined;
+}
+
+async function sendWebResponse(response: http.ServerResponse, webResponse: Response): Promise<void> {
+  response.writeHead(webResponse.status, Object.fromEntries(webResponse.headers.entries()));
+  response.end(Buffer.from(await webResponse.arrayBuffer()));
+}
+
 function defaultStaticDir(): string {
   const thisFile = fileURLToPath(import.meta.url);
   return path.resolve(path.dirname(thisFile), "../view");
@@ -122,7 +130,12 @@ function defaultStaticDir(): string {
 async function main(): Promise<void> {
   const config = loadConfig();
   const port = Number(process.env.VIEW_PORT ?? "17864");
-  const server = createReviewServer({ dataDir: config.dataDir, staticDir: defaultStaticDir() });
+  const server = createReviewServer({
+    adminSecret: process.env.ADMIN_SECRET ?? process.env.CRON_SECRET,
+    config,
+    dataDir: config.dataDir,
+    staticDir: defaultStaticDir()
+  });
   server.listen(port, "127.0.0.1", () => {
     console.log(`Review page: http://127.0.0.1:${port}`);
   });

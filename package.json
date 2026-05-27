@@ -6,19 +6,14 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && vite build",
-    "dev": "vite --host 127.0.0.1 --port 17865",
     "test": "tsc -p tsconfig.json && vite build && node --test \"dist/**/*.test.js\"",
     "auth:x": "node dist/src/cli.js auth:x",
     "sync:x": "node dist/src/cli.js sync:x",
     "sync:github": "node dist/src/cli.js sync:github",
     "export:md": "node dist/src/cli.js export:md",
-    "demo": "node scripts/seed-demo.mjs",
     "view": "node dist/src/server.js",
-    "vercel:build": "tsc -p tsconfig.json && vite build",
     "cf:setup": "node scripts/cf-setup.mjs",
-    "cf:migrate": "node scripts/run-wrangler.mjs d1 migrations apply DB --remote",
-    "cf:migrate:local": "node scripts/run-wrangler.mjs d1 migrations apply DB --local",
-    "cf:deploy": "tsc -p tsconfig.json && vite build && node scripts/run-wrangler.mjs deploy",
+    "cf:deploy-demo": "tsc -p tsconfig.json && vite build && node scripts/run-wrangler.mjs deploy --config wrangler.demo.toml",
     "cf:release": "tsc -p tsconfig.json && vite build && node scripts/run-wrangler.mjs d1 migrations apply DB --remote && node scripts/run-wrangler.mjs deploy"
   },
   "dependencies": {
