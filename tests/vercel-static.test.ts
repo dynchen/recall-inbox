@@ -19,6 +19,7 @@ test("vercel deployment exposes api adapters and cron configuration", async () =
   assert.match(packageJson.dependencies.postgres, /^\d/);
   assert.match(vercelConfig, /"buildCommand": "yarn build"/);
   assert.match(vercelConfig, /"path": "\/api\/cron\/sync"/);
+  assert.match(vercelConfig, /"schedule": "0 21 \* \* \*"/);
   assert.match(apiSync, /handleVercelNodeRequest/);
   assert.match(apiItems, /handleVercelNodeRequest/);
   assert.match(apiCron, /handleVercelCronSync/);

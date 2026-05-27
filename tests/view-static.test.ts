@@ -470,7 +470,8 @@ test("review page exposes markdown export from the sources dialog", async () => 
   assert.match(app, /const \[exportMessage, setExportMessage\]/);
   assert.match(app, /async function exportMarkdown/);
   assert.match(app, /fetch\("\/api\/export\/markdown"/);
-  assert.match(app, /downloadMarkdownFile/);
+  assert.match(app, /downloadMarkdownArchive/);
+  assert.doesNotMatch(app, /for \(const file of files\) downloadMarkdownFile\(file\)/);
   assert.match(app, /Export Markdown/);
   assert.match(app, /className="admin-button export-button"/);
 });

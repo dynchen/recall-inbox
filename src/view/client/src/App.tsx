@@ -4,6 +4,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Select } from "@base-ui/react/select";
 import type { ComponentProps } from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createZip } from "../../../zip.js";
 
 type SavedItemStatus = "inbox" | "keep" | "action" | "dismiss";
 
@@ -325,11 +326,12 @@ function sourceUrls(metadata: XMetadata): XUrlEntity[] {
   return metadata.entities?.urls ?? [];
 }
 
-function downloadMarkdownFile(file: MarkdownExportFile) {
-  const url = URL.createObjectURL(new Blob([file.content], { type: "text/markdown;charset=utf-8" }));
+function downloadMarkdownArchive(files: MarkdownExportFile[]) {
+  const archive = createZip(files);
+  const url = URL.createObjectURL(new Blob([archive], { type: "application/zip" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = file.filename;
+  link.download = "recall-inbox-markdown.zip";
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -742,8 +744,8 @@ export function App() {
       const data = (await response.json()) as { files?: MarkdownExportFile[]; error?: string };
       if (!response.ok) throw new Error(data.error || "Markdown export failed.");
       const files = data.files || [];
-      for (const file of files) downloadMarkdownFile(file);
-      setExportMessage(files.length ? `Downloaded ${files.length} Markdown file${files.length === 1 ? "" : "s"}.` : "No items to export.");
+      if (files.length) downloadMarkdownArchive(files);
+      setExportMessage(files.length ? `Downloaded Markdown archive with ${files.length} file${files.length === 1 ? "" : "s"}.` : "No items to export.");
     } catch (error) {
       setExportMessage(error instanceof Error ? error.message : "Markdown export failed.");
     } finally {

@@ -14,7 +14,7 @@ test("renders an empty daily markdown file", () => {
   assert.match(markdown, /No new saved items today\./);
 });
 
-test("renders saved items with source, link, quote, and inbox status", () => {
+test("renders saved items with source, link, quote, and review status", () => {
   const item: SavedItem = {
     id: "x:1",
     source: "x",
@@ -24,7 +24,9 @@ test("renders saved items with source, link, quote, and inbox status", () => {
     text: "Useful note\nsecond line",
     discoveredAt: "2026-05-25T01:00:00.000Z",
     createdAt: "2026-05-24T01:00:00.000Z",
-    tags: []
+    tags: ["api", "read later"],
+    status: "action",
+    note: "Follow up\nsecond line"
   };
 
   const markdown = renderDailyMarkdown("2026-05-25", [item], "## Themes\n- API");
@@ -34,7 +36,9 @@ test("renders saved items with source, link, quote, and inbox status", () => {
   assert.match(markdown, /Link: https:\/\/x\.com\/example\/status\/1/);
   assert.match(markdown, /> Useful note\n  second line/);
   assert.match(markdown, /Discovered: 2026-05-25T01:00:00.000Z/);
-  assert.match(markdown, /Status: inbox/);
+  assert.match(markdown, /Status: action/);
+  assert.match(markdown, /Tags: api, read later/);
+  assert.match(markdown, /Note: Follow up\n  second line/);
 });
 
 test("renders saved items as a flat list", () => {

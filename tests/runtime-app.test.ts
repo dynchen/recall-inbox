@@ -138,9 +138,9 @@ test("runtime app handler exports stored items as daily markdown files", async (
             text: "Repository",
             discoveredAt: "2026-05-26T00:00:00.000Z",
             createdAt: "2026-05-26T00:00:00.000Z",
-            tags: ["github"],
+            tags: ["github", "try"],
             status: "action",
-            note: ""
+            note: "Ship it\nsoon"
           }
         ]
       }),
@@ -179,7 +179,9 @@ test("runtime app handler exports stored items as daily markdown files", async (
           "",
           "> Repository",
           "",
-          "- Status: inbox",
+          "- Status: action",
+          "- Tags: github, try",
+          "- Note: Ship it\n  soon",
           ""
         ].join("\n")
       }

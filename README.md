@@ -246,8 +246,8 @@ use `Authorize X`. The page starts the protected one-time OAuth flow without
 putting the secret in the authorization URL. The Worker stores the resulting X
 token in D1 and refreshes it during later syncs.
 
-The default cron is `15 18 * * *`, which runs at 18:15 UTC. Adjust
-`wrangler.toml` if you want another time.
+The default cron is `0 21 * * *`, which runs at 21:00 UTC and 05:00 in UTC+8.
+Adjust `wrangler.toml` if you want another time.
 
 Run a manual sync:
 

@@ -58,7 +58,9 @@ export function renderDailyMarkdown(date: string, items: SavedItem[], summary?: 
     lines.push("");
     lines.push(`> ${escapeMarkdown(item.text)}`);
     lines.push("");
-    lines.push("- Status: inbox");
+    lines.push(`- Status: ${item.status ?? "inbox"}`);
+    if (item.tags?.length) lines.push(`- Tags: ${item.tags.join(", ")}`);
+    if (item.note?.trim()) lines.push(`- Note: ${escapeMarkdown(item.note.trim())}`);
     lines.push("");
   }
 

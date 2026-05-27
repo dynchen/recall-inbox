@@ -20,7 +20,7 @@ test("cloudflare deployment uses D1, static assets, and daily cron", async () =>
   assert.match(wranglerExample, /main = "dist\/src\/worker\.js"/);
   assert.match(wranglerExample, /binding = "DB"/);
   assert.match(wranglerExample, /directory = "\.\/dist\/view"/);
-  assert.match(wranglerExample, /crons = \["15 18 \* \* \*"\]/);
+  assert.match(wranglerExample, /crons = \["0 21 \* \* \*"\]/);
   assert.match(wranglerExample, /database_id = "<your-d1-database-id>"/);
   assert.doesNotMatch(wranglerExample, /preview_database_id/);
   assert.doesNotMatch(wranglerExample, /a1f659ee-a726-43a9-800b-aaf70585dcdb/);
@@ -117,6 +117,7 @@ test("cloudflare setup scripts document repeatable deployment", async () => {
   assert.match(readme, /yarn cf:deploy-demo/);
   assert.match(readme, /yarn cf:release/);
   assert.match(readme, /yarn install/);
+  assert.match(readme, /The default cron is `0 21 \* \* \*`, which runs at 21:00 UTC and 05:00 in UTC\+8\./);
 });
 
 test("worker markdown export does not bundle local filesystem helpers", async () => {
