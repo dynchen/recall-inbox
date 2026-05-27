@@ -705,6 +705,7 @@ textarea:focus,
   }
 }
 
+/* Item cards: shell */
 .item-card {
   background: var(--surface-raised);
   border: 1px solid var(--border-soft);
@@ -747,8 +748,9 @@ textarea:focus,
   opacity: 0.7;
 }
 
+/* Item cards: header */
 .item-header {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .item-primary-row {
@@ -760,7 +762,7 @@ textarea:focus,
 
 .item-main {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -776,24 +778,28 @@ textarea:focus,
 .item-title strong {
   font-size: 15px;
   font-weight: 670;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.item-reading-meta {
+  color: var(--text-faint);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 10px;
+}
+
+.meta-date.secondary {
+  color: color-mix(in srgb, var(--text-faint) 72%, transparent);
 }
 
 .item-side-actions {
   align-items: center;
   display: flex;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: 7px;
   justify-content: flex-end;
-}
-
-.meta {
-  color: var(--text-faint);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 12px;
-  gap: 12px;
-  margin-bottom: 7px;
 }
 
 .source-badge,
@@ -835,6 +841,11 @@ textarea:focus,
 .status-badge.status-dismiss {
   background: var(--surface-muted);
   color: var(--text-muted);
+}
+
+/* Item cards: actions */
+.card-status {
+  flex: 0 0 auto;
 }
 
 .open-link {
@@ -909,9 +920,14 @@ textarea:focus,
   color: var(--warning);
 }
 
+.item-card:not(:hover):not(.active-review-item) .status-actions {
+  opacity: 0.64;
+}
+
+/* Item cards: reading content */
 .item-content {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .item-body {
@@ -921,7 +937,7 @@ textarea:focus,
 .item-text {
   color: #26231f;
   font-size: 14px;
-  line-height: 1.58;
+  line-height: 1.64;
   margin-bottom: 0;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -972,15 +988,15 @@ textarea:focus,
 .source-signal-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 9px;
+  gap: 5px;
+  margin-top: 10px;
 }
 
 .source-signal-chip {
   background: color-mix(in srgb, var(--surface-muted) 74%, transparent);
   border: 1px solid var(--border-soft);
   border-radius: 999px;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--text-muted) 82%, transparent);
   display: inline-flex;
   font-size: 12px;
   line-height: 1;
@@ -1019,6 +1035,7 @@ textarea:focus,
   display: block;
 }
 
+/* Item cards: review controls */
 .review-trigger {
   background: transparent;
   border: 0;
@@ -1708,6 +1725,10 @@ textarea {
     display: contents;
   }
 
+  .card-status {
+    display: none;
+  }
+
   .status-actions {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -1734,11 +1755,11 @@ textarea {
     flex: 1 1 0;
   }
 
-  .meta {
+  .item-reading-meta {
     gap: 6px;
   }
 
-  .meta span {
+  .item-reading-meta span {
     width: 100%;
   }
 

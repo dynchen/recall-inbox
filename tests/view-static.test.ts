@@ -323,6 +323,12 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.match(app, /className="item-primary-row"/);
   assert.match(app, /className="item-main"/);
   assert.match(app, /className="item-side-actions"/);
+  assert.match(app, /className="item-reading-meta"/);
+  assert.match(app, /className="meta-date primary"/);
+  assert.match(app, /className="meta-date secondary"/);
+  assert.match(app, /className=\{`status-badge card-status status-\$\{status\}`\}/);
+  assert.match(app, /<div className="item-title">[\s\S]*source-badge[\s\S]*<strong>[\s\S]*<\/strong>\s*<\/div>/);
+  assert.doesNotMatch(app, /<div className="item-title">[\s\S]{0,500}status-badge/);
   assert.match(app, /className="review-workflow"/);
   assert.match(app, /className="review-step-list"/);
   assert.match(app, /className="review-field-label"/);
@@ -337,6 +343,14 @@ test("review page separates source setup, workflow, card hierarchy, and first-ru
   assert.match(css, /\.workflow-board/);
   assert.match(css, /\.queue-header/);
   assert.match(css, /\.item-primary-row/);
+  assert.match(css, /\/\* Item cards: shell \*\//);
+  assert.match(css, /\/\* Item cards: header \*\//);
+  assert.match(css, /\/\* Item cards: reading content \*\//);
+  assert.match(css, /\/\* Item cards: review controls \*\//);
+  assert.match(css, /\.item-title strong\s*{[\s\S]*line-height: 1\.35;/);
+  assert.match(css, /\.item-reading-meta/);
+  assert.match(css, /\.meta-date\.secondary/);
+  assert.match(css, /\.item-card:not\(:hover\):not\(\.active-review-item\) \.status-actions/);
   assert.match(css, /\.item-side-actions/);
   assert.match(css, /\.review-workflow/);
   assert.match(css, /\.empty-state/);
@@ -486,6 +500,8 @@ test("review page exposes protected manual sync controls", async () => {
   assert.match(app, /const \[demoMode, setDemoMode\]/);
   assert.match(app, /const \[adminStatus, setAdminStatus\]/);
   assert.match(app, /async function loadAdminStatus/);
+  assert.match(app, /const closeAfterUnlock = accessLocked && !options\.quiet/);
+  assert.match(app, /if \(closeAfterUnlock\) setAdminOpen\(false\)/);
   assert.match(app, /function startSourceAuth/);
   assert.match(app, /function runManualSync/);
   assert.match(app, /\/api\/admin\/status/);

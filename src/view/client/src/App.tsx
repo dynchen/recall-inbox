@@ -638,6 +638,7 @@ export function App() {
       setSyncMessage("Enter access key first.");
       return;
     }
+    const closeAfterUnlock = accessLocked && !options.quiet;
     if (!options.quiet) setSyncMessage("Checking sources...");
     try {
       const response = await fetch("/api/admin/status", {
@@ -648,6 +649,7 @@ export function App() {
       setAdminStatus(data as AdminStatus);
       await loadItems(adminSecret);
       if (!options.quiet) setSyncMessage("Source status loaded.");
+      if (closeAfterUnlock) setAdminOpen(false);
     } catch (error) {
       setAdminStatus(null);
       setSyncMessage(error instanceof Error ? error.message : "Failed to check sources.");
@@ -1274,14 +1276,14 @@ function ItemCard({
             <div className="item-title">
               <span className={`source-badge source-${item.source}`}>{sourceLabel(item.source)}</span>
               <strong>{details?.repo || (item.authorHandle ? `@${item.authorHandle}` : item.authorName || "Unknown author")}</strong>
-              <span className={`status-badge status-${status}`}>{statusLabels[status]}</span>
             </div>
-            <div className="meta">
-              <span>Created {item.createdLabel}</span>
-              <span>Discovered {item.discoveredLabel}</span>
+            <div className="item-reading-meta">
+              <span className="meta-date primary">Created {item.createdLabel}</span>
+              <span className="meta-date secondary">Discovered {item.discoveredLabel}</span>
             </div>
           </div>
           <div className="item-side-actions">
+            <span className={`status-badge card-status status-${status}`}>{statusLabels[status]}</span>
             <div className="status-actions" aria-label="Quick review actions">
               {statusOptions.map((option) => (
                 <button
