@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const port = Number(process.env.VIEW_PORT ?? "17864");
   const server = createReviewServer({
-    adminSecret: process.env.ADMIN_SECRET ?? process.env.CRON_SECRET,
+    adminSecret: config.adminSecret,
     config,
     dataDir: config.dataDir,
     staticDir: defaultStaticDir()

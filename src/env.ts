@@ -27,6 +27,7 @@ export function loadConfig(cwd = process.cwd()): AppConfig {
   const dotEnv = loadDotEnv(path.join(cwd, ".env"));
 
   return {
+    adminSecret: envValue(dotEnv, "ADMIN_SECRET") || envValue(dotEnv, "CRON_SECRET") || undefined,
     xClientId: envValue(dotEnv, "X_CLIENT_ID") || undefined,
     xClientSecret: envValue(dotEnv, "X_CLIENT_SECRET") || undefined,
     xRedirectUri:

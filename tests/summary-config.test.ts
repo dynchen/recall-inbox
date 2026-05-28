@@ -37,6 +37,15 @@ test("loadConfig reads provider-neutral summary settings", async () => {
   assert.equal(config.summaryBaseUrl, "https://summary.example.com/v1/responses");
 });
 
+test("loadConfig reads local admin secret", async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), "recall-inbox-"));
+  await writeFile(path.join(cwd, ".env"), "ADMIN_SECRET=local-secret\n");
+
+  const config = loadConfig(cwd);
+
+  assert.equal(config.adminSecret, "local-secret");
+});
+
 test("loadConfig ignores provider-specific legacy summary settings", async () => {
   const cwd = await mkdtemp(path.join(tmpdir(), "recall-inbox-"));
   await writeFile(

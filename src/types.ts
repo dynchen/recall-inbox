@@ -30,6 +30,7 @@ export interface XTokenSet {
 }
 
 export interface AppConfig {
+  adminSecret?: string;
   xClientId?: string;
   xClientSecret?: string;
   xRedirectUri: string;
