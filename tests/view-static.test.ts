@@ -509,6 +509,10 @@ test("review page exposes protected manual sync controls", async () => {
   assert.match(app, /const sourceActions/);
   assert.match(app, /interface SourceStatus/);
   assert.match(app, /const \[adminSecret, setAdminSecret\]/);
+  assert.match(app, /localStorage\.getItem\("recall-inbox-admin-secret"\)/);
+  assert.match(app, /localStorage\.setItem\("recall-inbox-admin-secret", value\)/);
+  assert.match(app, /localStorage\.removeItem\("recall-inbox-admin-secret"\)/);
+  assert.doesNotMatch(app, /sessionStorage/);
   assert.match(app, /const \[accessLocked, setAccessLocked\]/);
   assert.match(app, /const \[demoMode, setDemoMode\]/);
   assert.match(app, /const \[adminStatus, setAdminStatus\]/);

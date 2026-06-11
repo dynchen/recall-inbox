@@ -345,7 +345,7 @@ export function App() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dailyReviewActive, setDailyReviewActive] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [adminSecret, setAdminSecret] = useState(() => sessionStorage.getItem("recall-inbox-admin-secret") || "");
+  const [adminSecret, setAdminSecret] = useState(() => localStorage.getItem("recall-inbox-admin-secret") || "");
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
@@ -643,9 +643,9 @@ export function App() {
     setAdminSecret(value);
     setAdminStatus(null);
     if (value) {
-      sessionStorage.setItem("recall-inbox-admin-secret", value);
+      localStorage.setItem("recall-inbox-admin-secret", value);
     } else {
-      sessionStorage.removeItem("recall-inbox-admin-secret");
+      localStorage.removeItem("recall-inbox-admin-secret");
       setItems([]);
       setAccessLocked(true);
     }
