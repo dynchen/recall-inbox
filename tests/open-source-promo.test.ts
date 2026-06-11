@@ -13,25 +13,12 @@ test("readme presents the project for first-time open source visitors", async ()
   assert.match(readme, /## Deployment Options/);
   assert.match(readme, /### Credential Guide/);
   assert.match(readme, /Starring` user permission set to read/);
-  assert.match(readme, /\[Roadmap\]\(ROADMAP\.md\)/);
+  assert.doesNotMatch(readme, /roadmap/i);
   assert.match(readme, /sync -> review -> tag\/note -> export/);
   assert.match(readme, /\[Source Adapter Guide\]\(docs\/source-adapter\.md\)/);
   await access("docs/assets/recall-inbox-screenshot.png");
   await access("docs/source-adapter.md");
-  await access("ROADMAP.md");
-});
-
-test("roadmap emphasizes the most valuable near-term open source work", async () => {
-  const roadmap = await readFile("ROADMAP.md", "utf8");
-
-  assert.match(roadmap, /## Near Term/);
-  assert.match(roadmap, /### Source Adapters/);
-  assert.match(roadmap, /Weibo favorites/);
-  assert.match(roadmap, /### Review Workflow/);
-  assert.match(roadmap, /### Action Exports/);
-  assert.match(roadmap, /### GitHub Stars Intelligence/);
-  assert.match(roadmap, /### Deployment Experience/);
-  assert.match(roadmap, /## Non-Goals/);
+  await assert.rejects(() => access("ROADMAP.md"));
 });
 
 test("package scripts do not include a local fake-data demo", async () => {

@@ -41,12 +41,6 @@ https://recall-inbox-demo.kapler.workers.dev
   `yarn cf:release`.
 - Vercel: deploy the same UI and API routes with Postgres and Vercel Cron.
 
-## Project Direction
-
-See [Roadmap](ROADMAP.md) for planned source adapters, review workflow
-improvements, action exports, GitHub Stars intelligence, and deployment
-polish.
-
 ## Source Configuration
 
 Configure one or more sources.
